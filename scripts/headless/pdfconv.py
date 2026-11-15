@@ -66,9 +66,9 @@ def _group_svg(g: dict, rect) -> str:
         d_parts.append("Z")
     w = float(rect.width)
     h = float(rect.height)
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %.3f %.3f">'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="%.3f %.3f %.3f %.3f">'
             '<path d="%s" fill="none" stroke="black" stroke-width="1"/></svg>'
-            % (w, h, " ".join(d_parts)))
+            % (float(rect.x0), float(rect.y0), w, h, " ".join(d_parts)))
 
 
 def _page_drawings(page) -> list[tuple[str, tuple, tuple]]:
@@ -81,10 +81,10 @@ def _page_drawings(page) -> list[tuple[str, tuple, tuple]]:
     page_box = (float(pr.x0), float(pr.y0), float(pr.x1), float(pr.y1))
     out = []
     for g in groups:
-        svg = _group_svg(g, pr)
+        r = g.get("rect") or pr
+        svg = _group_svg(g, r)   # viewBox=组 rect：否则小线条撑成整页图
         if not svg:
             continue
-        r = g.get("rect") or pr
         out.append((svg, (float(r.x0), float(r.y0), float(r.x1), float(r.y1)), page_box))
     return out
 
@@ -129,19 +129,23 @@ def _svg_to_png(svg_bytes: bytes, w_mm: float, h_mm: float, dpi: int = 150) -> b
     return bio.getvalue()
 
 
-def _add_svg_picture(document, svg_bytes: bytes, page_box: tuple) -> str:
+def _add_svg_picture(document, svg_bytes: bytes, gbox: tuple) -> str:
     """占位 PNG 插图后把 image part 的 blob 替换为 SVG 字节；失败降级 PNG。
-    返回 'svg'（blob 替换成功）或 'png'（降级）。"""
+    gbox=组 rect(x0,y0,x1,y1) pt：插图尺寸按组实际大小（曾误用页框——
+    一条下划线被撑成整页大图把正文全挤掉）。返回 'svg' / 'png'。"""
     import io
     from docx.oxml.ns import qn
     from docx.shared import Mm
 
-    x0, y0, x1, y1 = page_box
+    x0, y0, x1, y1 = gbox
     w_pt = max(1.0, x1 - x0)
     h_pt = max(1.0, y1 - y0)
-    page_w_mm = w_pt * 25.4 / 72.0
-    img_w = page_w_mm * _IMG_RATIO
-    img_h = img_w * (h_pt / w_pt)
+    img_w = w_pt * 25.4 / 72.0
+    img_h = h_pt * 25.4 / 72.0
+    # 等比 clamp：不放大；最大 150x100mm（限正文区内）
+    scale = min(1.0, 150.0 / max(img_w, 0.1), 100.0 / max(img_h, 0.1))
+    img_w = max(1.0, img_w * scale)
+    img_h = max(0.5, img_h * scale)
 
     p = document.add_paragraph()
     run = p.add_run()
@@ -154,14 +158,14 @@ def _add_svg_picture(document, svg_bytes: bytes, page_box: tuple) -> str:
     if part is None:
         return "png"
     try:
-        part._blob = bytes(svg_bytes)
+        part._blob = svg_bytes if isinstance(svg_bytes, bytes) else svg_bytes.encode("utf-8")
         return "svg"
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [pdfconv] blob 替换失败（降级 PNG）：{e}")
     try:
         part._blob = _svg_to_png(svg_bytes, img_w, img_h)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [pdfconv] PNG 降级也失败（保留占位）：{e}")
     return "png"
 
 
@@ -185,14 +189,14 @@ def _assign_drawings(lines, draws) -> dict:
         if best is not None and best[0] < _GAP_PT:
             i = best[1]
             where = "after" if dc >= best[2] else "before"
-            slots.setdefault((where, i), []).append((dc, svg))
+            slots.setdefault((where, i), []).append((dc, svg, gbox))
         else:
             idx = len(lines)
             for j, (yc, _y0, _y1, _spans) in enumerate(lines):
                 if yc > dc:
                     idx = j
                     break
-            slots.setdefault(("before", idx), []).append((dc, svg))
+            slots.setdefault(("before", idx), []).append((dc, svg, gbox))
     for key in slots:
         slots[key].sort(key=lambda t: t[0])
     return slots
@@ -253,8 +257,25 @@ def pdf_to_docx(pdf_path, out_path=None, keep_drawings: bool = True) -> Path:
         pbox = page_boxes[pi] if pi < len(page_boxes) else (0.0, 0.0, 595.0, 842.0)
 
         def _emit_pics(where: str, idx: int) -> None:
-            for _yc, svg in slots.get((where, idx), []):
-                _add_svg_picture(document, svg.encode("utf-8"), pbox)
+            items = slots.get((where, idx), [])
+            if not items:
+                return
+            # 同槽多组聚合：联合 bbox + 拼 path，插一张图（否则 221 条线=221 张图）
+            import re as _re
+            ds = []
+            bx0 = by0 = 1e18
+            bx1 = by1 = -1e18
+            for _dc, svg, gb in items:
+                m = _re.search(r'd="([^"]*)"', svg)
+                if m:
+                    ds.append(m.group(1))
+                bx0 = min(bx0, gb[0]); by0 = min(by0, gb[1])
+                bx1 = max(bx1, gb[2]); by1 = max(by1, gb[3])
+            bw, bh = max(bx1 - bx0, 1.0), max(by1 - by0, 1.0)
+            merged = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="%.3f %.3f %.3f %.3f">'
+                      '<path d="%s" fill="none" stroke="black" stroke-width="1"/></svg>'
+                      % (bx0, by0, bw, bh, " ".join(ds)))
+            _add_svg_picture(document, merged.encode("utf-8"), (bx0, by0, bx1, by1))
 
         for i, (_yc, _y0, _y1, spans) in enumerate(lines):
             _emit_pics("before", i)

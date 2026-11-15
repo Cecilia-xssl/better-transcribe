@@ -560,59 +560,121 @@ class Handler(BaseHTTPRequestHandler):
                 import io as _io
                 from PIL import Image as _I
                 import numpy as _np
-                im = _I.open(_io.BytesIO(raw)).convert("L")
-                pw = float(body.get("paper_w") or 190.0)
-                ph = float(body.get("paper_h") or 263.0)
-                if max(im.size) > 1600:
-                    r = 1600.0 / max(im.size)
-                    im = im.resize((max(1, int(im.size[0] * r)), max(1, int(im.size[1] * r))))
-                a = _np.asarray(im, dtype=_np.uint8)
-                H, W = a.shape
-                # 大津阈值
-                hist = _np.bincount(a.ravel(), minlength=256).astype(_np.float64)
-                w0 = _np.cumsum(hist)
-                w1 = w0[-1] - w0
-                mids = _np.arange(256)
-                s0 = _np.cumsum(hist * mids)
-                with _np.errstate(divide="ignore", invalid="ignore"):
-                    mu0 = s0 / w0
-                    mu1 = (s0[-1] - s0) / w1
-                    sb = w0 * w1 * (mu0 - mu1) ** 2
-                thr = int(_np.nanargmax(sb))
-                dark = a <= thr
-                min_len = max(12, int(W * 0.04))
-                segs = []
-                for y in range(2, H - 2):
-                    row = dark[y].astype(_np.int8)
-                    d1 = _np.diff(_np.concatenate(([0], row, [0])))
-                    starts = _np.flatnonzero(d1 == 1)
-                    ends = _np.flatnonzero(d1 == -1)
-                    for s, e in zip(starts, ends):
-                        if e - s >= min_len:
-                            up = int(dark[y - 2, s:e].sum())
-                            dn = int(dark[y + 2, s:e].sum())
-                            if up < (e - s) * 0.5 and dn < (e - s) * 0.5:
-                                segs.append((y, int(s), int(e)))
-                # 合并相邻行重叠段（线宽 2~5px 成线）
-                lines = []
-                for y, s, e in segs:
-                    hit = None
-                    for L in lines:
-                        if abs(L["y"] - y) <= 4 and s < L["e"] and e > L["s"]:
-                            hit = L
+                name = str(body.get("name") or "")
+                ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+                bg_out = None
+                pages_im = []
+                if ext == "pdf":
+                    # PDF：逐页渲染（上限 12 页）
+                    import fitz
+                    _doc = fitz.open(stream=raw, filetype="pdf")
+                    for _i, _pg in enumerate(_doc):
+                        if _i >= 12:
                             break
-                    if hit:
-                        hit["y"] = (hit["y"] * hit["n"] + y) / (hit["n"] + 1)
-                        hit["n"] += 1
-                        hit["s"], hit["e"] = min(hit["s"], s), max(hit["e"], e)
-                    else:
-                        lines.append({"y": float(y), "s": s, "e": e, "n": 1})
+                        _pix = _pg.get_pixmap(dpi=150)
+                        _rgb = _I.frombytes("RGB", (_pix.width, _pix.height), _pix.samples)
+                        if bg_out is None:
+                            bg_out = _rgb
+                        pages_im.append(_rgb.convert("L"))
+                    _doc.close()
+                elif ext in ("doc", "docx"):
+                    # doc/docx：排版渲染各页墨迹图（检测器与扫描图同一套）
+                    import sys as _sys
+                    _sys.path.insert(0, str(HEADLESS))
+                    import kenjoy_common as _kc
+                    from layout import Ctx as _Ctx, layout_docx as _ld
+                    import gfont as _gf
+                    from PIL import ImageDraw as _ID
+                    _tmp = OUTBOX / "detect-tmp"
+                    _tmp.mkdir(parents=True, exist_ok=True)
+                    _src = _tmp / ("src." + ext)
+                    _src.write_bytes(raw)
+                    _dx = _kc.ensure_docx(_src)
+                    _cfg = _kc.load_config()
+                    _fp = _kc.find_font(str(_cfg.get("default_font") or "blood8-2_kvenjoy_blood8.gfont"))
+                    _font = _gf.GFont(str(_fp))
+                    _pw = float(body.get("paper_w") or 190.0)
+                    _ph = float(body.get("paper_h") or 263.0)
+                    _ctx = _Ctx(_font, page_w=_pw, page_h=_ph,
+                                margin_l=0, margin_r=0, margin_t=0, margin_b=0)
+                    _ctx.draw_charts = True   # 矢量下划线/框线画进墨迹图（检测目标）
+                    _ctx.draw_images = True
+                    _res = _ld(_dx, _font, _ctx, potrace_exe=None, max_pages=12,
+                               boxes=[(0, 0, _pw, _ph)], skip_first_para=True)
+                    _W, _H = 1240, int(1240 * _ph / max(_pw, 1))
+                    for _pi, _pgs in enumerate(_res.pages):
+                        _im2 = _I.new("L", (_W, _H), 255)
+                        _dr = _ID.Draw(_im2)
+                        for _st in _pgs:
+                            _pts = [(x / _pw * _W, y / _ph * _H) for x, y in _st.points]
+                            if len(_pts) >= 2:
+                                _dr.line(_pts, fill=0, width=2)
+                        pages_im.append(_im2)
+                    if pages_im and bg_out is None:
+                        bg_out = pages_im[0].convert("RGB")
+                else:
+                    pages_im = [_I.open(_io.BytesIO(raw)).convert("L")]
+
                 out = []
-                for L in sorted(lines, key=lambda L: (L["y"], L["s"])):
-                    out.append({"x": round(L["s"] * pw / W, 2),
-                                "y": round(min(L["y"] * ph / H, ph - 1), 2),
-                                "w": round((L["e"] - L["s"]) * pw / W, 2)})
-                self._json({"ok": True, "lines": out})
+                for pno, im_p in enumerate(pages_im, 1):
+                    pw = float(body.get("paper_w") or 190.0)
+                    ph = float(body.get("paper_h") or 263.0)
+                    im = im_p
+                    if max(im.size) > 1600:
+                        r = 1600.0 / max(im.size)
+                        im = im.resize((max(1, int(im.size[0] * r)), max(1, int(im.size[1] * r))))
+                    a = _np.asarray(im, dtype=_np.uint8)
+                    H, W = a.shape
+                    # 大津阈值
+                    hist = _np.bincount(a.ravel(), minlength=256).astype(_np.float64)
+                    w0 = _np.cumsum(hist)
+                    w1 = w0[-1] - w0
+                    mids = _np.arange(256)
+                    s0 = _np.cumsum(hist * mids)
+                    with _np.errstate(divide="ignore", invalid="ignore"):
+                        mu0 = s0 / w0
+                        mu1 = (s0[-1] - s0) / w1
+                        sb = w0 * w1 * (mu0 - mu1) ** 2
+                    thr = int(_np.nanargmax(sb))
+                    dark = a <= thr
+                    min_len = max(12, int(W * 0.04))
+                    segs = []
+                    for y in range(2, H - 2):
+                        row = dark[y].astype(_np.int8)
+                        d1 = _np.diff(_np.concatenate(([0], row, [0])))
+                        starts = _np.flatnonzero(d1 == 1)
+                        ends = _np.flatnonzero(d1 == -1)
+                        for s, e in zip(starts, ends):
+                            if e - s >= min_len:
+                                up = int(dark[y - 2, s:e].sum())
+                                dn = int(dark[y + 2, s:e].sum())
+                                if up < (e - s) * 0.5 and dn < (e - s) * 0.5:
+                                    segs.append((y, int(s), int(e)))
+                    # 合并相邻行重叠段（线宽 2~5px 成线）
+                    lines = []
+                    for y, s, e in segs:
+                        hit = None
+                        for L in lines:
+                            if abs(L["y"] - y) <= 4 and s < L["e"] and e > L["s"]:
+                                hit = L
+                                break
+                        if hit:
+                            hit["y"] = (hit["y"] * hit["n"] + y) / (hit["n"] + 1)
+                            hit["n"] += 1
+                            hit["s"], hit["e"] = min(hit["s"], s), max(hit["e"], e)
+                        else:
+                            lines.append({"y": float(y), "s": s, "e": e, "n": 1})
+                    for L in sorted(lines, key=lambda L: (L["y"], L["s"])):
+                        out.append({"x": round(L["s"] * pw / W, 2),
+                                    "y": round(min(L["y"] * ph / H, ph - 1), 2),
+                                    "w": round((L["e"] - L["s"]) * pw / W, 2),
+                                    "page": pno})
+                resp = {"ok": True, "lines": out}
+                if bg_out is not None:
+                    _bb = _io.BytesIO()
+                    bg_out.save(_bb, format="PNG")
+                    resp["bg_image"] = "data:image/png;base64," + base64.b64encode(_bb.getvalue()).decode()
+                self._json(resp)
             except Exception as e:
                 self._json({"ok": False, "err": str(e)[:200]})
         elif op == "save-machine":

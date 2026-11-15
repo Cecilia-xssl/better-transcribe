@@ -33,6 +33,10 @@ input.xs{width:52px}input.sm{width:66px}input.md{width:96px}input.wide{width:100
 .btn.danger{color:#b42318;border-color:#fecdca}
 .btn.danger:hover{background:#fef3f2}
 .btn.mini{padding:3px 9px;font-size:12px}
+.delx{width:22px;height:22px;border-radius:50%;border:1px solid #f0c0c0;background:#fff;color:#b42318;
+  font-size:14px;line-height:1;cursor:pointer;padding:0;transition:all .15s}
+.delx:hover{background:#b42318;color:#fff;border-color:#b42318;transform:scale(1.12)}
+.delx:active{transform:scale(.92)}
 .hint{font-size:12px;color:#98a2b3;line-height:1.5}
 .hint-doc{margin-top:8px}
 .hint-doc div{margin:3px 0;line-height:1.6}
@@ -111,7 +115,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
 .ov-body{display:flex;align-items:center;justify-content:center;padding:4px}
 #ovImg{max-height:78vh;max-width:66vw;display:block}
 .page-wrap .stage{position:relative;display:inline-block;transform-origin:center center;transition:transform .12s ease}
-.page-wrap .veil{background:rgba(255,255,255,.58);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+.page-wrap .veil{position:absolute;left:0;right:0;background:rgba(255,255,255,.58);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);pointer-events:none}
 #tplsvg{width:100%;height:auto;background:#fafbfc;border:1px solid #e4e7ec;border-radius:8px;display:block;touch-action:none;user-select:none}
 #tplsvg .drag{cursor:move}
 .slider{width:110px;vertical-align:middle;accent-color:#2e7df6}
@@ -254,10 +258,17 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       </div>
       <div class="hint" style="margin:2px 0 8px">正文区为默认编辑对象（不可删除），续写页已并入正文区</div>
       <table class="slots" id="slotrows">
-        <tr><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
+        <tr><th><input type="checkbox" title="全选" onchange="slotCheckAll(this)"></th><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
       </table>
-      <div class="row" style="margin-top:9px">
+      <div class="row" style="margin-top:9px;flex-wrap:wrap;gap:6px;align-items:center">
         <button class="btn" onclick="addSlot()">添加栏位</button>
+        <span class="hint">批量：</span>
+        <button class="btn mini danger" onclick="batchSlots('del')">删除</button>
+        <button class="btn mini" onclick="batchSlots('on')">启用</button>
+        <button class="btn mini" onclick="batchSlots('off')">停用</button>
+        <input class="sval" id="batchPages" style="width:72px" placeholder="写入页">
+        <button class="btn mini" onclick="batchSlots('pages')">应用</button>
+        <span class="hint" id="batchCount"></span>
       </div>
       <div class="hint hint-doc">
         <div><b>值 · 公式</b>　按表达式求值。变量：<code>stem</code> 文件名　<code>name</code> 全名　<code>idx</code> 第几份　<code>page</code> 第几页　<code>today</code> 日期</div>
@@ -273,7 +284,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       <div class="row">
         <label class="f">缩放 <input type="range" id="tplZoom" class="slider" min="1" max="4" step="0.25" value="1" oninput="tplZoomChanged()"></label>
         <button class="btn mini" onclick="$('bgInput').click()">导入背景</button>
-        <input type="file" id="bgInput" accept="image/*" hidden onchange="bgPicked(event)">
+        <input type="file" id="bgInput" accept="image/*,.pdf,.doc,.docx" hidden onchange="bgPicked(event)">
         <button class="btn mini" onclick="detectBg()">识别元素</button>
         <span class="hint">滚轮缩放 / 拖空白平移</span>
       </div>
@@ -340,7 +351,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       <div class="page-wrap" id="ovWrap">
         <div class="stage" id="ovStage">
           <img id="ovImg" alt="页面预览" draggable="false">
-          <div class="hl veil" id="ovVeil" hidden></div>
+          <div class="veil" id="ovVeil" hidden></div>
           <div class="hl" id="ovHl" hidden></div>
           <div class="hl-line" id="ovHlLine" hidden></div>
           <div class="badge" id="ovBadge" hidden></div>
@@ -517,7 +528,7 @@ function pileClick(i){
   const man = (stackData && stackData.files) || [];
   const j = man.findIndex(f => f.name === q.name);
   if(j >= 0){ openViewer(j); }
-  else { uiAlert('「' + q.name + '」还没有预览图：点右上「生成预览」后再看'); }
+  else { uiAlert('「' + q.name + '」的预览正在生成，请稍候再点'); }
 }
 
 /* ---------- 运行控制 ---------- */
@@ -700,9 +711,10 @@ function drawViewer(){
     }else{
       doneTo = bodyTop + bodyH * s.pct / 100;
     }
-    veil.hidden = false;
-    veil.style.top = doneTo + '%';
-    veil.style.height = Math.max(0, 100 - doneTo) + '%';
+    // 已写部分绿高亮；未写部分正常显示（不加遮罩）
+    hl.hidden = false;
+    hl.style.top = '0';
+    hl.style.height = doneTo + '%';
     badge.hidden = false;
     badge.className = 'badge';
     badge.style.background = '#475467';
@@ -757,7 +769,8 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
   const tr = document.createElement('tr');
   const isFx = mode === 'formula';
   const ph4 = isFx ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
-  tr.innerHTML = '<td><input class="sname" value="' + esc(name) + '"></td>' +
+  tr.innerHTML = '<td><input type="checkbox" class="sck" onchange="slotSelChanged()"></td>' +
+    '<td><input class="sname" value="' + esc(name) + '"></td>' +
     '<td class="vcell"><select class="smode"><option value="text"' + (isFx ? '' : ' selected') + '>文本</option>' +
     '<option value="formula"' + (isFx ? ' selected' : '') + '>公式</option></select>' +
     '<input class="sval' + (isFx ? ' fx' : '') + '" value="' + esc(value) + '" placeholder="' + ph4 + '"></td>' +
@@ -768,7 +781,7 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
     '<td><input class="sp" value="' + esc(pages != null ? pages : '1') + '" placeholder="1"></td>' +
     '<td style="text-align:center"><input type="checkbox" class="sen"' + (enabled ? ' checked' : '') + '></td>' +
     '<td style="white-space:nowrap"><button class="btn mini" onclick="testSlot(this)">测</button> ' +
-    '<button class="btn mini danger" onclick="delSlot(this)">删</button></td>';
+    '<button class="delx" title="删除该元素" onclick="delSlot(this)">×</button></td>';
   tb.appendChild(tr);
   const sel = tr.querySelector('.smode');
   sel.addEventListener('change', () => {
@@ -788,6 +801,34 @@ function addSlot(){
   tplData.slots['新栏位'] = {x: 25, y: 45, size: 5, max_w: 20, value: '', pages: '1', enabled: true, mode: 'text'};
   rebuildSlots();
   dirty = true;
+  renderTpl();
+}
+function slotCheckAll(cb){
+  document.querySelectorAll('#slotrows .sck').forEach(c => { c.checked = cb.checked; });
+  slotSelChanged();
+}
+function slotSelChanged(){
+  const n = document.querySelectorAll('#slotrows .sck:checked').length;
+  const el = $('batchCount');
+  if(el) el.textContent = n ? ('已选 ' + n + ' 项') : '';
+}
+async function batchSlots(op){
+  const rows = [...document.querySelectorAll('#slotrows tr')].filter(tr => {
+    const c = tr.querySelector('.sck'); return c && c.checked;
+  });
+  if(!rows.length){ uiAlert('请先勾选要批量操作的元素'); return; }
+  if(op === 'del'){
+    const names = rows.map(tr => (tr.querySelector('.sname')||{}).value || '?').join('、');
+    if(!(await uiConfirm('删除所选 ' + rows.length + ' 个元素？\n' + names))) return;
+    rows.forEach(tr => tr.remove());
+  }else if(op === 'pages'){
+    const v = ($('batchPages').value || '').trim() || '1';
+    rows.forEach(tr => { tr.querySelector('.sp').value = v; });
+  }else{
+    rows.forEach(tr => { tr.querySelector('.sen').checked = (op === 'on'); });
+  }
+  dirty = true;
+  slotSelChanged();
   renderTpl();
 }
 async function delSlot(btn){
@@ -1069,7 +1110,7 @@ function bindMField(id, sliderId){
 function testBody(){ cal('frame'); }
 
 /* ---------- 模板预览：缩放/平移/背景/识别 ---------- */
-let tplZoom = 1, tplPan = {x: 0, y: 0}, bgImage = null, viewFrozen = null;
+let tplZoom = 1, tplPan = {x: 0, y: 0}, bgImage = null, bgFile = null, viewFrozen = null;
 function tplZoomChanged(){
   tplZoom = Math.max(1, +$('tplZoom').value || 1);
   renderTpl();
@@ -1080,29 +1121,40 @@ function bgPicked(ev){
   if(!f) return;
   const rd = new FileReader();
   rd.onload = () => {
-    bgImage = rd.result;
-    renderTpl();
-    $('bgNote').textContent = '背景已导入（随设计保存）';
+    bgFile = {data: rd.result, name: f.name};
+    if(/\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name)){
+      bgImage = rd.result;
+      renderTpl();
+      $('bgNote').textContent = '背景已导入（随设计保存）';
+    }else{
+      bgImage = null;
+      renderTpl();
+      $('bgNote').textContent = '已导入「' + f.name + '」，点「识别元素」提取栏位';
+    }
   };
   rd.readAsDataURL(f);
 }
 async function detectBg(){
-  const img = bgImage;
-  if(!img){ uiAlert('请先点「导入背景」选择纸张照片/扫描图'); return; }
+  const src = bgFile || (bgImage ? {data: bgImage, name: 'bg.png'} : null);
+  if(!src){ uiAlert('请先点「导入背景」选择纸张照片/扫描图，或单页 PDF/doc/docx'); return; }
   $('bgNote').textContent = '正在识别元素…';
   const d = collectTpl();
-  const j = await api('detect-bg', {image: img, paper_w: d.paper_w, paper_h: d.paper_h});
+  const j = await api('detect-bg', {image: src.data, name: src.name,
+    paper_w: d.paper_w, paper_h: d.paper_h});
   if(!j.ok){ $('bgNote').textContent = '识别失败: ' + (j.err || ''); return; }
+  if(j.bg_image){ bgImage = j.bg_image; }   // PDF/doc/docx 的渲染页用作背景预览
   const lines = j.lines || [];
-  const slots = collectSlots();
+  // 先清空元素列表，再加入自动识别出的元素
+  const slots = {};
   lines.forEach((L, k) => {
     slots['识别' + (k + 1)] = {x: Math.round(L.x * 10) / 10, y: Math.round(L.y * 10) / 10,
-      size: 4, max_w: Math.round(L.w * 10) / 10, value: '', pages: '1', enabled: true, mode: 'text'};
+      size: 4, max_w: Math.round(L.w * 10) / 10, value: '',
+      pages: String(L.page || 1), enabled: true, mode: 'text'};   // 自动写入应写页码
   });
   tplData.slots = slots;
   rebuildSlots();
   renderTpl();
-  $('bgNote').textContent = '识别到 ' + lines.length + ' 个元素，已生成草稿栏位（未保存，请核对后保存设计）';
+  $('bgNote').textContent = '识别到 ' + lines.length + ' 个元素，已清空并重建元素列表（未保存，请核对后保存设计）';
 }
 
 /* ---------- 查看器：滚轮缩放 / 长按平移 ---------- */
