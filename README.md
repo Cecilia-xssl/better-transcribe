@@ -8,6 +8,19 @@
 
 本地网页控制台提供：预览、批量队列、模板编辑（栏位拖拽/背景识别）、机器预设、校准定位、实时日志。
 
+![控制台界面](docs/screenshot.pdf)
+
+（`docs/screenshot.pdf` 为 A2 纵向整页打印，可自行转图片查看。）
+
+## 示例文件
+
+`examples/` 内含可直接试跑的示例：
+
+| 文件 | 说明 |
+|---|---|
+| `1902.02860v3.pdf` | 公开论文 *Crop Yield Prediction Using Deep Neural Networks*（[arXiv:1902.02860](https://arxiv.org/abs/1902.02860)，Frontiers in Plant Science，CC BY）——演示 PDF 誊抄 |
+| `sample-questionnaire.pdf` | 通用问卷调查表（本项目生成）——含下划线栏位与方框，演示「导入背景 + 识别元素」自动创建模板栏位 |
+
 ## 功能
 
 - **四类文档**：`.docx`（段落/表格/图片/形状/公式/原生图表）、`.pdf`（文本+矢量）、`.xlsx/.xlsm`（表格）、`.xmind`（思维导图）
