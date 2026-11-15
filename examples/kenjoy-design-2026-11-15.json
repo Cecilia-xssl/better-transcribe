@@ -1,0 +1,61 @@
+{
+  "paper_w": 190,
+  "paper_h": 263,
+  "bg_image": "",
+  "skip": [
+    "附件"
+  ],
+  "draw_charts": true,
+  "draw_images": false,
+  "offset_x": 0,
+  "offset_y": 0,
+  "tilt_x": 0.7,
+  "tilt_y": 0.5,
+  "park_x": 210,
+  "park_y": 0,
+  "dot_x": 20,
+  "dot_y": 0,
+  "z_on": 7.3,
+  "z_off": 6.5,
+  "feed": 4900,
+  "travel": 5000,
+  "verify_dot": false,
+  "body": {
+    "x": 25,
+    "y": 32,
+    "w": 150,
+    "h": 210
+  },
+  "slots": {
+    "专业班次": {
+      "x": 110,
+      "y": 17,
+      "size": 5,
+      "max_w": 20.5,
+      "value": "班级",
+      "pages": "1",
+      "enabled": true,
+      "mode": "text"
+    },
+    "题目": {
+      "x": 25,
+      "y": 30,
+      "size": 6,
+      "max_w": 58,
+      "value": "stem",
+      "pages": "1",
+      "enabled": true,
+      "mode": "formula"
+    },
+    "姓名": {
+      "x": 110,
+      "y": 30,
+      "size": 4.5,
+      "max_w": 36,
+      "value": "Cecilia",
+      "pages": "1",
+      "enabled": true,
+      "mode": "text"
+    }
+  }
+}

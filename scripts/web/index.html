@@ -1333,6 +1333,7 @@ function importDesign(){
       if(!d.paper_w || !d.slots){ uiAlert('不是有效的设计 JSON（缺 paper_w / slots）'); return; }
       tplData = d;
       fillForm(d);
+      machineSnap = snapshotMachine();   // 导入=显式意图：机器值视为已确认，免复输
       dirty = true;
       renderTpl();
       uiAlert('设计已载入（尚未保存）：检查无误后点「保存设计」');

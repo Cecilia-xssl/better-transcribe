@@ -1,6 +1,7 @@
 {
   "paper_w": 190,
   "paper_h": 263,
+  "bg_image": "",
   "skip": [
     "附件"
   ],
@@ -8,7 +9,7 @@
   "draw_images": false,
   "offset_x": 0,
   "offset_y": 0,
-  "tilt_x": 0.7,
+  "tilt_x": 0.5,
   "tilt_y": 0.5,
   "park_x": 210,
   "park_y": 0,
