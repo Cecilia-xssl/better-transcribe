@@ -273,7 +273,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       </table>
       <div class="row" style="margin-top:9px">
         <button class="btn" onclick="addSlot()">添加栏位</button>
-        <span class="hint">多选：长按空白处拖动框选　操作：右键菜单</span>
+        <span class="hint">多选：长按拖动框选 / Ctrl+点击切换　操作：右键菜单</span>
       </div>
       <div id="ctxmenu" class="ctxmenu" hidden>
         <div onclick="ctxAct('on')">启用选中</div>
@@ -835,7 +835,8 @@ function onSelDown(e){
   if(e.button !== 0) return;
   if(e.target.closest('input,select,button,#ctxmenu')) return;   // 编辑区/右键菜单不抢
   const tr = e.target.closest('tr');
-  mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr};
+  mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr,
+        ctrl: e.ctrlKey || e.metaKey};
   mq.timer = setTimeout(() => {
     if(!mq) return;
     mq.active = true;
@@ -869,8 +870,12 @@ function onSelUp(e){
       tr.classList.toggle('selrow', hit);
     });
   }else if(mq.tr){
-    clearSel();
-    mq.tr.classList.add('selrow');
+    if(mq.ctrl){
+      mq.tr.classList.toggle('selrow');   // Ctrl+点击：切换选中
+    }else{
+      clearSel();
+      mq.tr.classList.add('selrow');
+    }
   }else{
     clearSel();
   }
