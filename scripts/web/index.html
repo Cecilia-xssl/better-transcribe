@@ -177,9 +177,9 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
     <h3>任务</h3>
     <div class="row">
       <span class="hint">起点定位</span>
-      <label class="f">第 <input type="text" id="fr" class="xs" value="1" oninput="startChanged()"> 份文件</label>
-      <label class="f">第 <input type="text" id="fp" class="xs" value="1" oninput="startChanged()"> 页</label>
-      <label class="f">进度 <input type="text" id="fs" class="xs" value="0" oninput="startChanged()"> %</label>
+      <label class="f">第 <input autocomplete="off" type="text" id="fr" class="xs" value="1" oninput="startChanged()"> 份文件</label>
+      <label class="f">第 <input autocomplete="off" type="text" id="fp" class="xs" value="1" oninput="startChanged()"> 页</label>
+      <label class="f">进度 <input autocomplete="off" type="text" id="fs" class="xs" value="0" oninput="startChanged()"> %</label>
       <button class="btn primary" onclick="startFrom()">从此开始</button>
       <button class="btn danger" onclick="runOp('stop')">停止</button>
       <span class="hint" id="brk"></span>
@@ -188,7 +188,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
     <div class="row">
       <button class="btn" onclick="$('_fileInput').click()">添加文件…</button>
       <button class="btn danger" onclick="clearQueue()">清空队列</button>
-      <input type="file" id="_fileInput" multiple accept=".docx,.doc,.pdf,.xlsx,.xlsm,.xmind" hidden onchange="onFilesPicked(event)">
+      <input autocomplete="off" type="file" id="_fileInput" multiple accept=".docx,.doc,.pdf,.xlsx,.xlsm,.xmind" hidden onchange="onFilesPicked(event)">
       <span class="hint">队列顺序 = 誊抄顺序，拖拽纸堆可调整</span>
     </div>
     <div class="stack-row" id="stacks"></div>
@@ -199,8 +199,8 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
   <section class="card">
     <h3>绘制选项</h3>
     <div class="row">
-      <label class="f"><input type="checkbox" id="dchart" checked onchange="dirty=true"> 绘制图表（统计图表 / CAD / SVG 线稿，黑白化后描摹）</label>
-      <label class="f"><input type="checkbox" id="dimg" checked onchange="dirty=true"> 绘制图像（普通照片素描化后排线）</label>
+      <label class="f"><input autocomplete="off" type="checkbox" id="dchart" checked onchange="dirty=true"> 绘制图表（统计图表 / CAD / SVG 线稿，黑白化后描摹）</label>
+      <label class="f"><input autocomplete="off" type="checkbox" id="dimg" checked onchange="dirty=true"> 绘制图像（普通照片素描化后排线）</label>
     </div>
     <div class="hint">关闭的类别留白占位（照旧自行粘贴）；SVG 恒为矢量直绘。此设置存于配置文件，随设计导入导出。</div>
   </section>
@@ -209,38 +209,38 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
     <div class="card">
       <h3>机器预设</h3>
       <div class="row">
-        <label class="f">落笔 Z <input type="text" id="zon" class="xs"></label>
-        <label class="f">抬笔 Z <input type="text" id="zoff" class="xs"></label>
+        <label class="f">落笔 Z <input autocomplete="off" type="text" id="zon" class="xs"></label>
+        <label class="f">抬笔 Z <input autocomplete="off" type="text" id="zoff" class="xs"></label>
       </div>
       <div class="divider"></div>
       <div class="row">
-        <label class="f">画线 <input type="text" id="spd" class="sm"></label>
-        <label class="f">空程 <input type="text" id="trv" class="sm"></label>
+        <label class="f">画线 <input autocomplete="off" type="text" id="spd" class="sm"></label>
+        <label class="f">空程 <input autocomplete="off" type="text" id="trv" class="sm"></label>
         <span class="hint">mm/min</span>
       </div>
       <div class="divider"></div>
       <div class="row">
-        <label class="f">停靠 X <input type="text" id="pkx" class="sm"></label>
-        <label class="f">Y <input type="text" id="pky" class="sm"></label>
+        <label class="f">停靠 X <input autocomplete="off" type="text" id="pkx" class="sm"></label>
+        <label class="f">Y <input autocomplete="off" type="text" id="pky" class="sm"></label>
         <span class="hint">机器坐标</span>
       </div>
       <div class="row">
-        <label class="f">定位点 X <input type="text" id="dotx" class="sm"></label>
-        <label class="f">Y <input type="text" id="doty" class="sm"></label>
-        <label class="f"><input type="checkbox" id="vdot"> 开始前画定位点</label>
+        <label class="f">定位点 X <input autocomplete="off" type="text" id="dotx" class="sm"></label>
+        <label class="f">Y <input autocomplete="off" type="text" id="doty" class="sm"></label>
+        <label class="f"><input autocomplete="off" type="checkbox" id="vdot"> 开始前画定位点</label>
       </div>
       <div class="divider"></div>
       <div class="mgroup" id="row-off" onmouseenter="showBubble('offset', this)" onmouseleave="hideBubble()">
         <div class="mtitle">位置偏移　<span class="hint">整页字迹整体平移，单位 mm</span></div>
         <div class="row grow">
           <span class="gl">左右</span>
-          <input type="range" id="tox-r" class="slider" min="-60" max="60" step="0.5">
-          <input type="text" id="tox" class="xs">
+          <input autocomplete="off" type="range" id="tox-r" class="slider" min="-60" max="60" step="0.5">
+          <input autocomplete="off" type="text" id="tox" class="xs">
         </div>
         <div class="row grow">
           <span class="gl">上下</span>
-          <input type="range" id="toy-r" class="slider" min="-60" max="60" step="0.5">
-          <input type="text" id="toy" class="xs">
+          <input autocomplete="off" type="range" id="toy-r" class="slider" min="-60" max="60" step="0.5">
+          <input autocomplete="off" type="text" id="toy" class="xs">
         </div>
       </div>
       <div class="divider"></div>
@@ -248,13 +248,13 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
         <div class="mtitle">落笔深浅修正　<span class="hint">纸面倾斜补偿，各 ±1mm</span></div>
         <div class="row grow">
           <span class="gl">右边缘</span>
-          <input type="range" id="tlx-r" class="slider" min="-1" max="1" step="0.05">
-          <input type="text" id="tlx" class="xs">
+          <input autocomplete="off" type="range" id="tlx-r" class="slider" min="-1" max="1" step="0.05">
+          <input autocomplete="off" type="text" id="tlx" class="xs">
         </div>
         <div class="row grow">
           <span class="gl">下边缘</span>
-          <input type="range" id="tly-r" class="slider" min="-1" max="1" step="0.05">
-          <input type="text" id="tly" class="xs">
+          <input autocomplete="off" type="range" id="tly-r" class="slider" min="-1" max="1" step="0.05">
+          <input autocomplete="off" type="text" id="tly" class="xs">
         </div>
       </div>
       <div class="divider"></div>
@@ -263,11 +263,11 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
     <div class="card" id="contentCard">
       <h3>内容</h3>
       <div class="row">
-        <label class="f">纸张 <input type="text" id="pw" class="xs"> × <input type="text" id="ph" class="xs"> mm</label>
+        <label class="f">纸张 <input autocomplete="off" type="text" id="pw" class="xs"> × <input autocomplete="off" type="text" id="ph" class="xs"> mm</label>
       </div>
       <div class="row">
-        <label class="f">正文区 x <input type="text" id="bx" class="xs"> y <input type="text" id="by" class="xs">
-          宽 <input type="text" id="bw" class="xs"> 高 <input type="text" id="bh" class="xs"></label>
+        <label class="f">正文区 x <input autocomplete="off" type="text" id="bx" class="xs"> y <input autocomplete="off" type="text" id="by" class="xs">
+          宽 <input autocomplete="off" type="text" id="bw" class="xs"> 高 <input autocomplete="off" type="text" id="bh" class="xs"></label>
         <button class="btn mini" onclick="testBody()">测</button>
       </div>
       <div class="hint" style="margin:2px 0 8px">正文区为默认编辑对象（不可删除），续写页已并入正文区</div>
@@ -297,9 +297,9 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       <h3>整体模板预览</h3>
       <svg id="tplsvg"></svg>
       <div class="row">
-        <label class="f">缩放 <input type="range" id="tplZoom" class="slider" min="1" max="4" step="0.25" value="1" oninput="tplZoomChanged()"></label>
+        <label class="f">缩放 <input autocomplete="off" type="range" id="tplZoom" class="slider" min="1" max="4" step="0.25" value="1" oninput="tplZoomChanged()"></label>
         <button class="btn mini" onclick="$('bgInput').click()">导入背景</button>
-        <input type="file" id="bgInput" accept="image/*,.pdf,.doc,.docx" hidden onchange="bgPicked(event)">
+        <input autocomplete="off" type="file" id="bgInput" accept="image/*,.pdf,.doc,.docx" hidden onchange="bgPicked(event)">
         <button class="btn mini" onclick="detectBg()">识别元素</button>
         <span class="hint">滚轮缩放 / 拖空白平移</span>
       </div>
@@ -307,7 +307,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       <div class="row">
         <button class="btn primary" onclick="saveDesign(false)">保存设计</button>
         <button class="btn" onclick="exportDesign()">导出设计</button>
-        <label class="btn" style="margin:0">导入设计 <input type="file" id="importFile" accept=".json,application/json" hidden onchange="importDesign()"></label>
+        <label class="btn" style="margin:0">导入设计 <input autocomplete="off" type="file" id="importFile" accept=".json,application/json" hidden onchange="importDesign()"></label>
       </div>
       <div class="hint" id="bgNote"></div>
     </div>
@@ -343,7 +343,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
     <div class="modal-title" id="modalTitle"></div>
     <div class="modal-text" id="modalText"></div>
     <div class="input-wrap" id="modalWrap" hidden>
-      <input type="text" id="modalInput" class="modal-input">
+      <input autocomplete="off" type="text" id="modalInput" class="modal-input">
       <div class="ghost" id="modalGhost"></div>
       <div class="flag" id="modalFlag"></div>
     </div>
@@ -784,16 +784,16 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
   const tr = document.createElement('tr');
   const isFx = mode === 'formula';
   const ph4 = isFx ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
-  tr.innerHTML = '<td><input class="sname" value="' + esc(name) + '"></td>' +
+  tr.innerHTML = '<td><input autocomplete="off" class="sname" value="' + esc(name) + '"></td>' +
     '<td class="vcell"><select class="smode"><option value="text"' + (isFx ? '' : ' selected') + '>文本</option>' +
     '<option value="formula"' + (isFx ? ' selected' : '') + '>公式</option></select>' +
-    '<input class="sval' + (isFx ? ' fx' : '') + '" value="' + esc(value) + '" placeholder="' + ph4 + '"></td>' +
-    '<td><input class="sx" value="' + esc(x) + '"></td>' +
-    '<td><input class="sy" value="' + esc(y) + '"></td>' +
-    '<td><input class="ss" value="' + esc(size) + '"></td>' +
-    '<td><input class="sw" value="' + esc(mw) + '"></td>' +
-    '<td><input class="sp" value="' + esc(pages != null ? pages : '1') + '" placeholder="1"></td>' +
-    '<td style="text-align:center"><input type="checkbox" class="sen"' + (enabled ? ' checked' : '') + '></td>' +
+    '<input autocomplete="off" class="sval' + (isFx ? ' fx' : '') + '" value="' + esc(value) + '" placeholder="' + ph4 + '"></td>' +
+    '<td><input autocomplete="off" class="sx" value="' + esc(x) + '"></td>' +
+    '<td><input autocomplete="off" class="sy" value="' + esc(y) + '"></td>' +
+    '<td><input autocomplete="off" class="ss" value="' + esc(size) + '"></td>' +
+    '<td><input autocomplete="off" class="sw" value="' + esc(mw) + '"></td>' +
+    '<td><input autocomplete="off" class="sp" value="' + esc(pages != null ? pages : '1') + '" placeholder="1"></td>' +
+    '<td style="text-align:center"><input autocomplete="off" type="checkbox" class="sen"' + (enabled ? ' checked' : '') + '></td>' +
     '<td style="white-space:nowrap"><button class="btn mini" onclick="testSlot(this)">测</button> ' +
     '<button class="delx" title="删除该元素" onclick="delSlot(this)">×</button></td>';
   tb.appendChild(tr);
