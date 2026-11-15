@@ -833,7 +833,7 @@ function updateMarquee(x, y){
 }
 function onSelDown(e){
   if(e.button !== 0) return;
-  if(e.target.closest('input,select,button')) return;   // 编辑区不抢
+  if(e.target.closest('input,select,button,#ctxmenu')) return;   // 编辑区/右键菜单不抢
   const tr = e.target.closest('tr');
   mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr};
   mq.timer = setTimeout(() => {
@@ -844,7 +844,7 @@ function onSelDown(e){
     document.body.appendChild(el);
     mq.el = el;
     updateMarquee(mq.x0, mq.y0);
-  }, 200);   // 长按阈值
+  }, 100);   // 长按阈值
 }
 function onSelMove(e){
   if(!mq) return;
