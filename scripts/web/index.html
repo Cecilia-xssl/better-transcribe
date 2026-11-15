@@ -810,6 +810,12 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
 }
 function addSlot(){
   tplData.slots = collectSlots();
+  if(tplData.slots['新栏位'] != null){
+    // 只允许一个「新栏位」：已有则聚焦改名，不重复添加
+    const tr = slotRow('新栏位');
+    if(tr){ const inp = tr.querySelector('.sname'); inp.focus(); inp.select(); }
+    return;
+  }
   tplData.slots['新栏位'] = {x: 25, y: 45, size: 5, max_w: 20, value: '', pages: '1', enabled: true, mode: 'text'};
   rebuildSlots();
   dirty = true;
@@ -833,6 +839,7 @@ function updateMarquee(x, y){
 }
 function onSelDown(e){
   if(e.button !== 0) return;
+  if(!e.target.closest('#slotrows')) return;   // 只在元素列表内框选（模板预览拖动不误触）
   if(e.target.closest('input,select,button,#ctxmenu')) return;   // 编辑区/右键菜单不抢
   const tr = e.target.closest('tr');
   mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr,
