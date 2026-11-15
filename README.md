@@ -52,7 +52,17 @@ python scripts\kenjoy_server.py
 
 笔画渲染优先使用 **gfont 字库**（奎享雕刻商业字库，`gcodeFonts/` 目录）。本仓库**不分发商业字库**——请自行准备 `.gfont` 文件放入 `gcodeFonts/`，或配置 `config.json` 的 `font_root` 指向外部字库目录。
 
-未配置 gfont 时自动降级到开源 **hanzi-writer** 笔画数据（联网拉取一次后离线缓存于 `hw_cache/`）。
+**没有商业字库也能直接用**：gfont 缺失时自动降级到开源笔顺数据，按字联网拉取一次后缓存在 `hw_cache/` 离线复用，无需任何额外配置。
+
+### 开源字库友情引用（一步到位）
+
+| 项目 | 说明 | 许可 |
+|---|---|---|
+| [hanzi-writer-data](https://github.com/chanind/hanzi-writer-data) | **本项目自动兜底的数据源**：汉字笔顺/笔画数据（常用字全覆盖），配合 [hanzi-writer](https://github.com/chanind/hanzi-writer) 生态 | MIT |
+| [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) | 汉字笔画数据的开源源头（hanzi-writer-data 的基础），含骨架与笔顺，可自行转换为其他格式 | 见仓库 |
+| [Hershey Fonts](https://emwm.org/hershey/) | 西文/数字/符号单线矢量字体，刻字机/CNC 圈的经典之选 | 公有领域 |
+
+给后来者的建议：**先不买商业字库直接跑本项目**——默认走 hanzi-writer-data 兜底（观感略逊于商业手写体但完全可用），觉得效果不够再考虑 gfont。各项目版权归各自作者所有，二次分发请遵守其许可协议。
 
 ## 配置
 
