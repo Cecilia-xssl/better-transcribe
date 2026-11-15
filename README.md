@@ -62,7 +62,7 @@ python scripts\kenjoy_server.py
 | [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) | 汉字笔画数据的开源源头（hanzi-writer-data 的基础），含骨架与笔顺，可自行转换为其他格式 | 见仓库 |
 | [Hershey Fonts](https://emwm.org/hershey/) | 西文/数字/符号单线矢量字体，刻字机/CNC 圈的经典之选 | 公有领域 |
 
-给后来者的建议：**先不买商业字库直接跑本项目**——默认走 hanzi-writer-data 兜底（观感略逊于商业手写体但完全可用），觉得效果不够再考虑 gfont。各项目版权归各自作者所有，二次分发请遵守其许可协议。
+各项目版权归各自作者所有，二次分发请遵守其许可协议。
 
 ## 配置
 
