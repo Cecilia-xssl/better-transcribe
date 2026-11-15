@@ -862,18 +862,21 @@ function updateMarquee(x, y){
 function onSelDown(e){
   if(e.button !== 0) return;
   if(!e.target.closest('#slotrows')) return;   // 只在元素列表内框选（模板预览拖动不误触）
-  if(e.target.closest('input,select,button,#ctxmenu')) return;   // 编辑区/右键菜单不抢
+  if(e.target.closest('#ctxmenu')) return;
   const tr = e.target.closest('tr');
+  const inField = !!e.target.closest('input,select,button');
   mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr,
-        ctrl: e.ctrlKey || e.metaKey};
+        inField: inField, ctrl: e.ctrlKey || e.metaKey};
   mq.timer = setTimeout(() => {
     if(!mq) return;
     mq.active = true;
+    // 长按即框选——即使从输入框起（点击仍走编辑，只有按住拖动才抢）
     const el = document.createElement('div');
     el.className = 'marquee';
     document.body.appendChild(el);
     mq.el = el;
     updateMarquee(mq.x0, mq.y0);
+    try{ document.getSelection().removeAllRanges(); }catch(err){}
   }, 100);   // 长按阈值
 }
 function onSelMove(e){
@@ -901,6 +904,8 @@ function onSelUp(e){
   }else if(mq.tr){
     if(mq.ctrl){
       mq.tr.classList.toggle('selrow');   // Ctrl+点击：切换选中
+    }else if(mq.inField){
+      // 输入框/按钮上的普通点击=编辑，不抢选中
     }else{
       clearSel();
       mq.tr.classList.add('selrow');
