@@ -95,7 +95,9 @@ def strokes_to_gcode(strokes: list[Stroke], cfg: GCodeConfig | None = None,
         elif cfg.pen_down_cmd:
             out.append(cfg.pen_down_cmd)
 
-    pen_up()  # 开场抬笔（按停靠点补偿）
+    # 开场高抬（Z-2）：从停靠点/上一任务位置出发的首段路程保持最高点，
+    # 防低抬笔净空（0.8mm）跨纸刮纸——到目标点后再降。
+    out.append(f"G1 F{cfg.z_speed:.0f} Z-2")
     # （已取消：每页开头先移动到停靠点——无意义路径）
 
     # 落笔预热：触纸 3 次慢速起落 + 压实（排墨 + 吃掉松电后 Z 空程）。
@@ -128,7 +130,13 @@ def strokes_to_gcode(strokes: list[Stroke], cfg: GCodeConfig | None = None,
             pen_up()
             down = False
         trav = cfg.travel * (0.85 if x0 < last_mx - 1.0 else 1.0)  # 左移空程降速防震
+        # 长空程（回行首/跨段）：升到最高点跨纸，防低抬笔刮纸
+        _dist = ((x0 - last_mx) ** 2 + (y0 - last_my) ** 2) ** 0.5
+        if _dist > 40.0:
+            out.append(f"G1 F{cfg.z_speed:.0f} Z-2")
         out.append(f"G1 F{trav:.0f} X{x0:.2f} Y{y0:.2f}")
+        if _dist > 40.0:
+            out.append(f"G1 F{cfg.z_speed:.0f} Z{z_lift:.2f}")
         last_mx, last_my = x0, y0
         cur_x, cur_y = x0, y0   # 先定位再落笔：立体补偿按起点采样
         pen_down()

@@ -9,7 +9,7 @@
   "draw_images": false,
   "offset_x": 0,
   "offset_y": 0,
-  "tilt_x": 0.5,
+  "tilt_x": 0.7,
   "tilt_y": 0.5,
   "park_x": 210,
   "park_y": 0,
@@ -26,5 +26,36 @@
     "w": 150,
     "h": 210
   },
-  "slots": {}
+  "slots": {
+    "专业班次": {
+      "x": 110,
+      "y": 17,
+      "size": 5,
+      "max_w": 20.5,
+      "value": "24农丁",
+      "pages": "1",
+      "enabled": true,
+      "mode": "text"
+    },
+    "题目": {
+      "x": 25,
+      "y": 30,
+      "size": 6,
+      "max_w": 58,
+      "value": "stem",
+      "pages": "1",
+      "enabled": true,
+      "mode": "formula"
+    },
+    "姓名": {
+      "x": 110,
+      "y": 30,
+      "size": 4.5,
+      "max_w": 36,
+      "value": "张威特202413150125",
+      "pages": "1",
+      "enabled": true,
+      "mode": "text"
+    }
+  }
 }
