@@ -8,9 +8,9 @@
 
 本地网页控制台提供：预览、批量队列、模板编辑（栏位拖拽/背景识别）、机器预设、校准定位、实时日志。
 
-![控制台界面](docs/screenshot.pdf)
+![控制台界面](docs/screenshot_01.png)
 
-（`docs/screenshot.pdf` 为 A2 纵向整页打印，可自行转图片查看。）
+（完整页面见 `docs/screenshot.pdf`，A2 纵向打印版。）
 
 ## 示例文件
 
