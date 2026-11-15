@@ -260,7 +260,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       <div class="divider"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="contentCard">
       <h3>内容</h3>
       <div class="row">
         <label class="f">纸张 <input type="text" id="pw" class="xs"> × <input type="text" id="ph" class="xs"> mm</label>
@@ -861,8 +861,9 @@ function updateMarquee(x, y){
 }
 function onSelDown(e){
   if(e.button !== 0) return;
-  if(!e.target.closest('#slotrows')) return;   // 只在元素列表内框选（模板预览拖动不误触）
+  if(!e.target.closest('#contentCard')) return;   // 内容栏内长按皆可框选
   if(e.target.closest('#ctxmenu')) return;
+  if(e.target.closest('input[type="range"]')) return;   // 滑条是拖动控件，不抢
   const tr = e.target.closest('tr');
   const inField = !!e.target.closest('input,select,button');
   mq = {x0: e.clientX, y0: e.clientY, el: null, active: false, tr: tr,
