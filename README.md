@@ -51,7 +51,7 @@ pip install python-docx pyserial Pillow openpyxl pymupdf
 python scripts\kenjoy_server.py
 ```
 
-浏览器打开 http://127.0.0.1:8765（仅本机监听）。也可运行 `启动誊抄控制台.bat`。
+浏览器打开 http://127.0.0.1:8765（仅本机监听）。
 
 首次使用：
 
