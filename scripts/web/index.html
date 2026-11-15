@@ -35,6 +35,10 @@ input.xs{width:52px}input.sm{width:66px}input.md{width:96px}input.wide{width:100
 .btn.mini{padding:3px 9px;font-size:12px}
 .marquee{position:fixed;z-index:250;border:1px solid #4a7dfc;background:rgba(74,125,252,.15);
   pointer-events:none;border-radius:2px}
+/* Ctrl 按下：列表内控件不可编辑，点击穿透到行=复选（扩大有效点击面积） */
+body.ctrlsel #slotrows input,
+body.ctrlsel #slotrows select,
+body.ctrlsel #slotrows button{pointer-events:none;opacity:.55}
 #slotrows tr.selrow > td{background:#e8f0fe}
 #slotrows tr.selrow > td input{background:#f4f8ff}
 .ctxmenu{position:fixed;z-index:300;min-width:150px;background:#fff;border:1px solid #d0d5dd;
@@ -881,6 +885,13 @@ function onSelUp(e){
   }
   mq = null;
 }
+document.addEventListener('keydown', e => {
+  if(e.key === 'Control') document.body.classList.add('ctrlsel');
+});
+document.addEventListener('keyup', e => {
+  if(e.key === 'Control') document.body.classList.remove('ctrlsel');
+});
+window.addEventListener('blur', () => document.body.classList.remove('ctrlsel'));
 document.addEventListener('pointerdown', onSelDown);
 document.addEventListener('pointermove', onSelMove);
 document.addEventListener('pointerup', onSelUp);
