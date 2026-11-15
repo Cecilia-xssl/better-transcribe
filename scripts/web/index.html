@@ -33,6 +33,15 @@ input.xs{width:52px}input.sm{width:66px}input.md{width:96px}input.wide{width:100
 .btn.danger{color:#b42318;border-color:#fecdca}
 .btn.danger:hover{background:#fef3f2}
 .btn.mini{padding:3px 9px;font-size:12px}
+#slotrows tr.selrow > td{background:#e8f0fe}
+#slotrows tr.selrow > td input{background:#f4f8ff}
+.ctxmenu{position:fixed;z-index:300;min-width:150px;background:#fff;border:1px solid #d0d5dd;
+  border-radius:8px;box-shadow:0 8px 24px rgba(16,24,40,.16);padding:5px;font-size:13px}
+.ctxmenu > div{padding:7px 12px;border-radius:6px;cursor:pointer}
+.ctxmenu > div:hover{background:#f2f4f7}
+.ctxmenu > div.danger{color:#b42318}
+.ctxmenu > div.danger:hover{background:#fef3f2}
+.ctxmenu .sep{height:1px;background:#e4e7ec;margin:4px 6px;padding:0}
 .delx{width:22px;height:22px;border-radius:50%;border:1px solid #f0c0c0;background:#fff;color:#b42318;
   font-size:14px;line-height:1;cursor:pointer;padding:0;transition:all .15s}
 .delx:hover{background:#b42318;color:#fff;border-color:#b42318;transform:scale(1.12)}
@@ -258,17 +267,18 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       </div>
       <div class="hint" style="margin:2px 0 8px">正文区为默认编辑对象（不可删除），续写页已并入正文区</div>
       <table class="slots" id="slotrows">
-        <tr><th><input type="checkbox" title="全选" onchange="slotCheckAll(this)"></th><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
+        <tr><th></th><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
       </table>
-      <div class="row" style="margin-top:9px;flex-wrap:wrap;gap:6px;align-items:center">
+      <div class="row" style="margin-top:9px">
         <button class="btn" onclick="addSlot()">添加栏位</button>
-        <span class="hint">批量：</span>
-        <button class="btn mini danger" onclick="batchSlots('del')">删除</button>
-        <button class="btn mini" onclick="batchSlots('on')">启用</button>
-        <button class="btn mini" onclick="batchSlots('off')">停用</button>
-        <input class="sval" id="batchPages" style="width:72px" placeholder="写入页">
-        <button class="btn mini" onclick="batchSlots('pages')">应用</button>
-        <span class="hint" id="batchCount"></span>
+        <span class="hint">多选：Ctrl/Shift 点击　全选：Ctrl+A　删除：Delete　更多：右键</span>
+      </div>
+      <div id="ctxmenu" class="ctxmenu" hidden>
+        <div onclick="ctxAct('on')">启用选中</div>
+        <div onclick="ctxAct('off')">停用选中</div>
+        <div onclick="ctxAct('pages')">设置写入页…</div>
+        <div class="sep"></div>
+        <div class="danger" onclick="ctxAct('del')">删除选中</div>
       </div>
       <div class="hint hint-doc">
         <div><b>值 · 公式</b>　按表达式求值。变量：<code>stem</code> 文件名　<code>name</code> 全名　<code>idx</code> 第几份　<code>page</code> 第几页　<code>today</code> 日期</div>
@@ -769,7 +779,7 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
   const tr = document.createElement('tr');
   const isFx = mode === 'formula';
   const ph4 = isFx ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
-  tr.innerHTML = '<td><input type="checkbox" class="sck" onchange="slotSelChanged()"></td>' +
+  tr.innerHTML = '<td><input type="checkbox" class="sck"></td>' +
     '<td><input class="sname" value="' + esc(name) + '"></td>' +
     '<td class="vcell"><select class="smode"><option value="text"' + (isFx ? '' : ' selected') + '>文本</option>' +
     '<option value="formula"' + (isFx ? ' selected' : '') + '>公式</option></select>' +
@@ -783,6 +793,10 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
     '<td style="white-space:nowrap"><button class="btn mini" onclick="testSlot(this)">测</button> ' +
     '<button class="delx" title="删除该元素" onclick="delSlot(this)">×</button></td>';
   tb.appendChild(tr);
+  tr.addEventListener('click', e => onRowClick(e, tr));
+  tr.addEventListener('contextmenu', e => onRowCtx(e, tr));
+  const ckb = tr.querySelector('.sck');
+  ckb.addEventListener('click', e => { e.stopPropagation(); onCkClick(e, tr); });
   const sel = tr.querySelector('.smode');
   sel.addEventListener('change', () => {
     const on = sel.value === 'formula';
@@ -803,32 +817,93 @@ function addSlot(){
   dirty = true;
   renderTpl();
 }
-function slotCheckAll(cb){
-  document.querySelectorAll('#slotrows .sck').forEach(c => { c.checked = cb.checked; });
-  slotSelChanged();
+function slotRows(){
+  return [...document.querySelectorAll('#slotrows tr')].slice(1);
 }
-function slotSelChanged(){
-  const n = document.querySelectorAll('#slotrows .sck:checked').length;
-  const el = $('batchCount');
-  if(el) el.textContent = n ? ('已选 ' + n + ' 项') : '';
+function syncSel(){
+  slotRows().forEach(tr => tr.classList.toggle('selrow', tr.querySelector('.sck').checked));
 }
-async function batchSlots(op){
-  const rows = [...document.querySelectorAll('#slotrows tr')].filter(tr => {
-    const c = tr.querySelector('.sck'); return c && c.checked;
-  });
-  if(!rows.length){ uiAlert('请先勾选要批量操作的元素'); return; }
+function selRange(tr, rows){
+  const idx = rows.indexOf(tr);
+  const last = rows.findIndex(r => r === lastSelRow);
+  if(last < 0){ tr.querySelector('.sck').checked = true; lastSelRow = tr; return; }
+  const [a, b] = [Math.min(last, idx), Math.max(last, idx)];
+  for(let i = a; i <= b; i++) rows[i].querySelector('.sck').checked = true;
+  lastSelRow = tr;
+}
+let lastSelRow = null;
+function onCkClick(e, tr){
+  const rows = slotRows();
+  if(e.shiftKey){ selRange(tr, rows); }
+  else if(e.ctrlKey || e.metaKey){ tr.querySelector('.sck').checked = !tr.querySelector('.sck').checked; lastSelRow = tr; }
+  else{
+    rows.forEach(r => { r.querySelector('.sck').checked = false; });
+    tr.querySelector('.sck').checked = true;
+    lastSelRow = tr;
+  }
+  syncSel();
+}
+function onRowClick(e, tr){
+  if(e.target.closest('input,select,button')) return;
+  const rows = slotRows();
+  if(e.shiftKey){ selRange(tr, rows); }
+  else if(e.ctrlKey || e.metaKey){ const c = tr.querySelector('.sck'); c.checked = !c.checked; lastSelRow = tr; }
+  else{
+    rows.forEach(r => { r.querySelector('.sck').checked = false; });
+    tr.querySelector('.sck').checked = true;
+    lastSelRow = tr;
+  }
+  syncSel();
+}
+function onRowCtx(e, tr){
+  e.preventDefault();
+  if(!tr.querySelector('.sck').checked){
+    slotRows().forEach(r => { r.querySelector('.sck').checked = false; });
+    tr.querySelector('.sck').checked = true;
+    lastSelRow = tr;
+    syncSel();
+  }
+  const m = $('ctxmenu');
+  m.hidden = false;
+  const mw = 150, mh = 130;
+  m.style.left = Math.min(e.clientX, innerWidth - mw) + 'px';
+  m.style.top = Math.min(e.clientY, innerHeight - mh) + 'px';
+}
+document.addEventListener('click', e => {
+  const m = $('ctxmenu');
+  if(m && !m.hidden && !e.target.closest('#ctxmenu')) m.hidden = true;
+});
+document.addEventListener('keydown', e => {
+  const ae = document.activeElement;
+  const typing = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && ae && ae.closest('#slotrows')){
+    e.preventDefault();
+    slotRows().forEach(r => { r.querySelector('.sck').checked = true; });
+    syncSel();
+    return;
+  }
+  if(e.key === 'Delete' && !typing && document.querySelector('#slotrows .sck:checked')){
+    e.preventDefault();
+    ctxAct('del');
+  }
+});
+async function ctxAct(op){
+  const rows = slotRows().filter(tr => tr.querySelector('.sck').checked);
+  const m = $('ctxmenu'); if(m) m.hidden = true;
+  if(!rows.length){ uiAlert('请先选中元素（Ctrl/Shift 多选）'); return; }
   if(op === 'del'){
     const names = rows.map(tr => (tr.querySelector('.sname')||{}).value || '?').join('、');
     if(!(await uiConfirm('删除所选 ' + rows.length + ' 个元素？\n' + names))) return;
     rows.forEach(tr => tr.remove());
   }else if(op === 'pages'){
-    const v = ($('batchPages').value || '').trim() || '1';
-    rows.forEach(tr => { tr.querySelector('.sp').value = v; });
+    const v = await uiPrompt('设置写入页（如 1 / 1,3 / 2-4 / all）', '1');
+    if(v == null) return;
+    rows.forEach(tr => { tr.querySelector('.sp').value = v.trim() || '1'; });
   }else{
     rows.forEach(tr => { tr.querySelector('.sen').checked = (op === 'on'); });
   }
   dirty = true;
-  slotSelChanged();
+  syncSel();
   renderTpl();
 }
 async function delSlot(btn){
