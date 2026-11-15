@@ -269,7 +269,7 @@ table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;bord
       </div>
       <div class="hint" style="margin:2px 0 8px">正文区为默认编辑对象（不可删除），续写页已并入正文区</div>
       <table class="slots" id="slotrows">
-        <tr><th></th><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
+        <tr><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
       </table>
       <div class="row" style="margin-top:9px">
         <button class="btn" onclick="addSlot()">添加栏位</button>
@@ -781,8 +781,7 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
   const tr = document.createElement('tr');
   const isFx = mode === 'formula';
   const ph4 = isFx ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
-  tr.innerHTML = '<td><input type="checkbox" class="sck"></td>' +
-    '<td><input class="sname" value="' + esc(name) + '"></td>' +
+  tr.innerHTML = '<td><input class="sname" value="' + esc(name) + '"></td>' +
     '<td class="vcell"><select class="smode"><option value="text"' + (isFx ? '' : ' selected') + '>文本</option>' +
     '<option value="formula"' + (isFx ? ' selected' : '') + '>公式</option></select>' +
     '<input class="sval' + (isFx ? ' fx' : '') + '" value="' + esc(value) + '" placeholder="' + ph4 + '"></td>' +
@@ -796,8 +795,6 @@ function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
     '<button class="delx" title="删除该元素" onclick="delSlot(this)">×</button></td>';
   tb.appendChild(tr);
   tr.addEventListener('contextmenu', e => onRowCtx(e, tr));
-  const ckb = tr.querySelector('.sck');
-  ckb.addEventListener('change', () => { tr.classList.toggle('selrow', ckb.checked); });
   const sel = tr.querySelector('.smode');
   sel.addEventListener('change', () => {
     const on = sel.value === 'formula';
@@ -821,8 +818,8 @@ function addSlot(){
 function slotRows(){
   return [...document.querySelectorAll('#slotrows tr')].slice(1);
 }
-function syncSel(){
-  slotRows().forEach(tr => tr.classList.toggle('selrow', tr.querySelector('.sck').checked));
+function clearSel(){
+  slotRows().forEach(tr => tr.classList.remove('selrow'));
 }
 /* 长按拖拽框选（资源管理器式，无键盘参与） */
 let mq = null;
@@ -869,16 +866,13 @@ function onSelUp(e){
     slotRows().forEach(tr => {
       const b = tr.getBoundingClientRect();
       const hit = !(b.right < r.left || b.left > r.right || b.bottom < r.top || b.top > r.bottom);
-      tr.querySelector('.sck').checked = hit;
+      tr.classList.toggle('selrow', hit);
     });
-    syncSel();
   }else if(mq.tr){
-    slotRows().forEach(x => { x.querySelector('.sck').checked = false; });
-    mq.tr.querySelector('.sck').checked = true;
-    syncSel();
+    clearSel();
+    mq.tr.classList.add('selrow');
   }else{
-    slotRows().forEach(x => { x.querySelector('.sck').checked = false; });
-    syncSel();
+    clearSel();
   }
   mq = null;
 }
@@ -887,10 +881,9 @@ document.addEventListener('pointermove', onSelMove);
 document.addEventListener('pointerup', onSelUp);
 function onRowCtx(e, tr){
   e.preventDefault();
-  if(!tr.querySelector('.sck').checked){
-    slotRows().forEach(r => { r.querySelector('.sck').checked = false; });
-    tr.querySelector('.sck').checked = true;
-    syncSel();
+  if(!tr.classList.contains('selrow')){
+    clearSel();
+    tr.classList.add('selrow');
   }
   const m = $('ctxmenu');
   m.hidden = false;
@@ -903,7 +896,7 @@ document.addEventListener('click', e => {
   if(m && !m.hidden && !e.target.closest('#ctxmenu')) m.hidden = true;
 });
 async function ctxAct(op){
-  const rows = slotRows().filter(tr => tr.querySelector('.sck').checked);
+  const rows = slotRows().filter(tr => tr.classList.contains('selrow'));
   const m = $('ctxmenu'); if(m) m.hidden = true;
   if(!rows.length){ uiAlert('请先选中元素（Ctrl/Shift 多选）'); return; }
   if(op === 'del'){
@@ -918,7 +911,6 @@ async function ctxAct(op){
     rows.forEach(tr => { tr.querySelector('.sen').checked = (op === 'on'); });
   }
   dirty = true;
-  syncSel();
   renderTpl();
 }
 async function delSlot(btn){
