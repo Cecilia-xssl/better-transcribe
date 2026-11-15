@@ -40,6 +40,9 @@ body.ctrlsel #slotrows input,
 body.ctrlsel #slotrows select,
 body.ctrlsel #slotrows button{pointer-events:none;opacity:.55}
 #slotrows tr.selrow > td{background:#e8f0fe}
+#tplsvg .tpl-sel > rect{stroke:#4a7dfc;stroke-width:1.1;fill:rgba(74,125,252,.14)}
+#tplsvg .tpl-hot > rect{stroke:#f59e0b;stroke-width:1.1;fill:rgba(245,158,11,.16)}
+#tplsvg .tpl-sel.tpl-hot > rect{stroke:#4a7dfc;fill:rgba(74,125,252,.2)}
 #slotrows tr.selrow > td input{background:#f4f8ff}
 .ctxmenu{position:fixed;z-index:300;min-width:150px;background:#fff;border:1px solid #d0d5dd;
   border-radius:8px;box-shadow:0 8px 24px rgba(16,24,40,.16);padding:5px;font-size:13px}
@@ -827,6 +830,25 @@ function slotRows(){
 function clearSel(){
   slotRows().forEach(tr => tr.classList.remove('selrow'));
 }
+/* 列表 ↔ 模板预览联动高亮 */
+let hotRow = null;
+function syncTplHighlight(){
+  const svg = $('tplsvg');
+  if(!svg) return;
+  svg.querySelectorAll('[data-el="slot"]').forEach(g => {
+    const tr = slotRow(g.getAttribute('data-name') || '');
+    g.classList.toggle('tpl-sel', !!(tr && tr.classList.contains('selrow')));
+    g.classList.toggle('tpl-hot', tr === hotRow);
+  });
+}
+new MutationObserver(() => syncTplHighlight()).observe($('slotrows'),
+  {subtree: true, attributes: true, attributeFilter: ['class']});
+$('slotrows').addEventListener('mouseover', e => {
+  const tr = e.target.closest ? e.target.closest('tr') : null;
+  hotRow = (tr && tr.querySelector('.sname')) ? tr : null;
+  syncTplHighlight();
+});
+$('slotrows').addEventListener('mouseleave', () => { hotRow = null; syncTplHighlight(); });
 /* 长按拖拽框选（资源管理器式，无键盘参与） */
 let mq = null;
 function updateMarquee(x, y){
@@ -1387,6 +1409,7 @@ function renderTpl(){
   p.push('<circle class="drag" data-el="dot" cx="' + d.dot_x + '" cy="' + d.dot_y + '" r="1" fill="#d64545"/>');
   p.push('<text x="' + (d.dot_x+1.8) + '" y="' + (d.dot_y-1.2) + '" font-size="3.6" fill="#d64545" pointer-events="none">定位点</text>');
   svg.innerHTML = p.join('');
+  syncTplHighlight();
 }
 $('tplsvg').addEventListener('pointerdown', e => {
   const el = e.target.closest ? e.target.closest('[data-el]') : null;
@@ -1398,7 +1421,7 @@ $('tplsvg').addEventListener('pointerdown', e => {
   if(el) viewFrozen = svg.getAttribute('viewBox');  // 仅元件拖动冻结视图；平移必须跟手
   e.preventDefault();
   drag = {el: el ? el.dataset.el : 'pan', name: el ? (el.dataset.name || '') : '',
-          x: e.clientX, y: e.clientY, mpp: mpp};
+          x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, mpp: mpp};
   try{ svg.setPointerCapture(e.pointerId); }catch(err){}
 });
 $('tplsvg').addEventListener('wheel', e => {
@@ -1472,7 +1495,16 @@ function snapAfter(el, name){
     $('doty').value = r2(snap(num($('doty').value), 'y', 'dot'));
   }
 }
-$('tplsvg').addEventListener('pointerup', () => {
+$('tplsvg').addEventListener('pointerup', e => {
+  // 槽位点击（移动 <4px）：联动选中对应列表行
+  if(drag && drag.el === 'slot' && Math.hypot(e.clientX - drag.ox, e.clientY - drag.oy) < 4){
+    const tr = slotRow(drag.name);
+    if(tr){
+      clearSel();
+      tr.classList.add('selrow');
+      tr.scrollIntoView({block: 'nearest'});
+    }
+  }
   if(drag && drag.el !== 'pan') snapAfter(drag.el, drag.name);
   drag = null;
   viewFrozen = null;
