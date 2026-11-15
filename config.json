@@ -1,0 +1,11 @@
+{
+  "install_dir": "",
+  "machine_profile": "默认Grbl机器",
+  "default_font": "blood8-2_kvenjoy_blood8.gfont",
+  "default_page": {
+    "pageWidth": 210.0,
+    "pageHeight": 297.0,
+    "lineNum": 30
+  },
+  "outbox_dir": "%USERPROFILE%\\.KenjoyDraw\\mimo-outbox"
+}

@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>写字机誊抄控制台</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.55 "Segoe UI",system-ui,-apple-system,"Microsoft YaHei",sans-serif;background:#f4f5f7;color:#1c2128;
+  -webkit-user-select:none;user-select:none}
+input,textarea,#status{user-select:text;-webkit-user-select:text}
+.top{display:flex;align-items:center;gap:14px;padding:13px 22px;background:#fff;border-bottom:1px solid #e4e7ec}
+.brand{font-size:17px;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;background:#f2f4f7;color:#475467;font-size:12.5px;border:1px solid #e4e7ec}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:#98a2b3}
+.pill.on{background:#ecfdf3;color:#027a48;border-color:#abefc6}
+.pill.on .dot{background:#12b76a}
+.spacer{flex:1}
+main{max-width:1440px;margin:18px auto;padding:0 20px;display:flex;flex-direction:column;gap:14px}
+.card{background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:15px 18px}
+.card h3{margin:0 0 11px;font-size:13px;font-weight:600;color:#475467;letter-spacing:.3px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:7px 0}
+label.f{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#475467;white-space:nowrap}
+input[type=text]{border:1px solid #d0d5dd;border-radius:7px;padding:6px 9px;font-size:13px;background:#fff;color:#1c2128}
+input:focus{outline:2px solid #b2ccff;border-color:#84adff}
+input.xs{width:52px}input.sm{width:66px}input.md{width:96px}input.wide{width:100%;min-width:200px}
+.btn{appearance:none;border:1px solid #d0d5dd;background:#fff;color:#1c2128;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;transition:background .12s,transform .12s,box-shadow .12s}
+.btn:hover{background:#f9fafb;transform:translateY(-1px);box-shadow:0 2px 8px rgba(16,24,40,.10)}
+.btn:active{transform:scale(.97);box-shadow:none}
+.btn:active{background:#f2f4f7}
+.btn.primary{background:#1c2128;border-color:#1c2128;color:#fff}
+.btn.primary:hover{background:#333a45}
+.btn.danger{color:#b42318;border-color:#fecdca}
+.btn.danger:hover{background:#fef3f2}
+.btn.mini{padding:3px 9px;font-size:12px}
+.hint{font-size:12px;color:#98a2b3;line-height:1.5}
+.hint-doc{margin-top:8px}
+.hint-doc div{margin:3px 0;line-height:1.6}
+.hint-doc code{background:#f2f4f7;border:1px solid #e4e7ec;border-radius:4px;padding:0 4px;font-size:11.5px;color:#344054}
+.grid3{display:grid;grid-template-columns:0.92fr 1.5fr 1.22fr;gap:14px}
+@media (max-width:1120px){.grid3{grid-template-columns:1fr}}
+table.slots{width:100%;border-collapse:collapse;font-size:12.5px}
+table.slots th{text-align:left;font-weight:600;color:#667085;padding:5px 6px;border-bottom:1px solid #e4e7ec}
+table.slots td{padding:4px 5px;border-bottom:1px solid #f2f4f7;vertical-align:middle}
+table.slots input{width:100%;min-width:40px;padding:4px 5px;font-size:12.5px;border:1px solid #d0d5dd;border-radius:6px}
+table.slots input.sname{min-width:56px}
+table.slots input.sval{min-width:76px}
+table.slots input.sp{min-width:50px}
+table.slots td.vcell{display:flex;gap:4px;align-items:center}
+table.slots select.smode{font-size:11px;padding:3px 2px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:#475467;width:48px;flex:none}
+table.slots input.sval.fx{font-family:Consolas,monospace;background:#fffbeb;border-color:#e8c878}
+.divider{height:1px;background:#eef0f3;margin:12px 0}
+#status{background:#f9fafb;border:1px solid #e4e7ec;border-radius:8px;padding:12px;white-space:pre-wrap;font:12px/1.5 Consolas,monospace;height:210px;overflow:auto;color:#344054}
+.stack-row{display:flex;flex-wrap:wrap;gap:20px;min-height:110px;align-items:flex-end}
+.pile{cursor:grab;width:112px;text-align:center;user-select:none}
+.pile:active{cursor:grabbing}
+.pile.dragging{opacity:.45;transform:scale(.97)}
+.stack-row.drop-on{outline:2px dashed #84adff;outline-offset:4px;border-radius:8px}
+.pile-cards{position:relative;height:128px}
+.pcard{position:absolute;left:12px;width:84px;height:114px;background:#fff;border:1px solid #d0d5dd;border-radius:4px}
+.pcard.c3{transform:rotate(-5deg);left:17px;top:3px}
+.pcard.c2{transform:rotate(3deg);left:8px;top:1px}
+.pcard.c1{transform:rotate(-1deg);top:0;overflow:hidden}
+.pcard.c1 img{width:100%;height:100%;object-fit:cover;display:block}
+.pile-cards .wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:rgba(28,33,40,.15);pointer-events:none;letter-spacing:1px}
+.pile-name{margin-top:5px;font-size:12px;color:#344054;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pile-pages{font-size:11px;color:#98a2b3}
+.pile:hover .pcard.c1{border-color:#84adff}
+.ov{position:fixed;inset:0;background:rgba(16,20,26,.38);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:50}
+.ov[hidden]{display:none}
+.ov-box{background:transparent;border-radius:12px;max-width:min(94vw,860px);max-height:94vh;display:flex;flex-direction:column;overflow:visible;animation:ovpop .22s ease}
+@keyframes ovpop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.ov-arrow{position:absolute;top:0;bottom:0;width:13%;min-width:92px;display:flex;align-items:center;justify-content:center;
+  font-size:56px;line-height:1;color:#667085;cursor:pointer;user-select:none;z-index:3;transition:background .15s,color .15s}
+.ov-arrow:hover{background:rgba(255,255,255,.12);color:#1c2128}
+.ov-arrow.left{left:0}
+.ov-arrow.right{right:0}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid #d0d5dd;border-top-color:#2e7df6;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pill.on .dot{animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+.ripple{position:fixed;z-index:70;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%) scale(.35);
+  background:radial-gradient(circle,rgba(46,125,246,.38) 0%,rgba(46,125,246,0) 70%);animation:rip .5s ease-out forwards}
+.ripple.small{animation:rip .38s ease-out forwards}
+@keyframes rip{to{transform:translate(-50%,-50%) scale(1.3);opacity:0}}
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(16,20,26,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.modal[hidden]{display:none}
+.modal-box{width:min(92vw,380px);background:#fff;border-radius:12px;padding:18px 20px;
+  box-shadow:0 18px 50px rgba(16,24,40,.22);animation:ovpop .18s ease}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.modal-text{font-size:13px;color:#475467;line-height:1.6;white-space:pre-wrap}
+.modal-input{width:100%;margin-top:12px;padding:8px 10px;border:1px solid #d0d5dd;border-radius:7px;font-size:13px}
+.modal-input.ok{border-color:#12b76a;box-shadow:0 0 0 2px rgba(18,183,106,.16)}
+.modal-input.bad{border-color:#f04438;box-shadow:0 0 0 2px rgba(240,68,56,.14)}
+.input-wrap{position:relative;margin-top:12px}
+.input-wrap .modal-input{margin-top:0;position:relative;z-index:2;background:transparent;
+  font:13px/1.45 "Segoe UI",system-ui,sans-serif;padding:8px 30px 8px 10px}
+.ghost{position:absolute;top:1px;left:1px;right:1px;bottom:1px;padding:8px 30px 8px 10px;
+  font:13px/1.45 "Segoe UI",system-ui,sans-serif;white-space:pre;overflow:hidden;
+  color:#98a2b3;z-index:1;pointer-events:none}
+.ghost .t{color:transparent}
+.flag{position:absolute;right:11px;top:50%;transform:translateY(-50%);z-index:3;
+  pointer-events:none;font-size:15px;line-height:1}
+.flag.ok{color:#027a48}
+.flag.bad{color:#b42318}
+.modal-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.ov-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;font-size:13px;color:#fff;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);margin-bottom:10px}
+.ov-head .hint{color:#e4e7ec}
+.ov-body{display:flex;align-items:center;justify-content:center;padding:4px}
+#ovImg{max-height:78vh;max-width:66vw;display:block}
+.page-wrap .stage{position:relative;display:inline-block;transform-origin:center center;transition:transform .12s ease}
+.page-wrap .veil{background:rgba(255,255,255,.58);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+#tplsvg{width:100%;height:auto;background:#fafbfc;border:1px solid #e4e7ec;border-radius:8px;display:block;touch-action:none;user-select:none}
+#tplsvg .drag{cursor:move}
+.slider{width:110px;vertical-align:middle;accent-color:#2e7df6}
+.mtitle{font-size:12.5px;font-weight:600;color:#475467;margin:2px 0 8px}
+.mgroup .gl{width:52px;display:inline-block;font-size:12.5px;color:#475467}
+.grow .slider{width:130px}
+.bubble{position:fixed;z-index:60;width:284px;background:#fff;border:1px solid #e4e7ec;border-radius:10px;
+  box-shadow:0 10px 30px rgba(16,24,40,.14);padding:12px 14px}
+.bubble-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px}
+.bsvg{width:100%;height:auto;display:block;background:#fafbfc;border-radius:6px}
+#offMarker{transition:transform .35s ease}
+.plane-wrap{perspective:420px;padding:16px 10px;background:#fafbfc;border-radius:6px}
+.plane3d{width:150px;height:108px;margin:0 auto;transition:transform .45s ease;
+  border:1px solid #98a2b3;background:linear-gradient(135deg,#eef4ff,#f8fafc)}
+.pgrid{width:100%;height:100%;
+  background-image:linear-gradient(#c9d4e4 1px,transparent 1px),linear-gradient(90deg,#c9d4e4 1px,transparent 1px);
+  background-size:18px 18px}
+.page-wrap{position:relative;display:inline-block;line-height:0}
+.page-wrap .hl{position:absolute;left:0;right:0;background:rgba(18,184,106,.22);pointer-events:none}
+.page-wrap .hl-line{position:absolute;left:0;right:0;border-top:2px dashed #12b76a;pointer-events:none}
+.page-wrap .badge{position:absolute;top:10px;right:10px;background:#12b76a;color:#fff;font-size:12px;padding:4px 10px;border-radius:6px;line-height:1.4}
+.page-wrap .badge.start{background:#e8590c}
+.pile .tag{position:absolute;top:2px;left:2px;z-index:2;font-size:10px;padding:2px 6px;border-radius:5px;background:#12b76a;color:#fff}
+.pile .tag.start{background:#e8590c}
+.pile-x{position:absolute;top:0;right:0;z-index:3;width:18px;height:18px;line-height:16px;text-align:center;
+  background:#fff;border:1px solid #d0d5dd;border-radius:0 4px 0 8px;color:#b42318;cursor:pointer;font-size:13px}
+.pile-x:hover{background:#fef3f2}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">写字机誊抄控制台</div>
+  <div class="pill" id="run"><span class="dot"></span><span id="runText">状态检查中</span></div>
+  <div class="spacer"></div>
+  <button class="btn" onclick="cal('dot')">定位轻点</button>
+</div>
+
+<main>
+  <section class="card">
+    <h3>任务</h3>
+    <div class="row">
+      <span class="hint">起点定位</span>
+      <label class="f">第 <input type="text" id="fr" class="xs" value="1" oninput="startChanged()"> 份文件</label>
+      <label class="f">第 <input type="text" id="fp" class="xs" value="1" oninput="startChanged()"> 页</label>
+      <label class="f">进度 <input type="text" id="fs" class="xs" value="0" oninput="startChanged()"> %</label>
+      <button class="btn primary" onclick="startFrom()">从此开始</button>
+      <button class="btn danger" onclick="runOp('stop')">停止</button>
+      <span class="hint" id="brk"></span>
+    </div>
+    <div class="divider"></div>
+    <div class="row">
+      <button class="btn" onclick="$('_fileInput').click()">添加文件…</button>
+      <button class="btn danger" onclick="clearQueue()">清空队列</button>
+      <input type="file" id="_fileInput" multiple accept=".docx,.doc,.pdf,.xlsx,.xlsm,.xmind" hidden onchange="onFilesPicked(event)">
+      <span class="hint">队列顺序 = 誊抄顺序，拖拽纸堆可调整</span>
+    </div>
+    <div class="stack-row" id="stacks"></div>
+    <div class="hint">拖拽 doc/docx/pdf 到此处加入队列；点击纸堆放大预览，左右键翻页；× 从队列移除</div>
+    <div class="hint" id="importNote"></div>
+  </section>
+
+  <section class="card">
+    <h3>绘制选项</h3>
+    <div class="row">
+      <label class="f"><input type="checkbox" id="dchart" checked onchange="dirty=true"> 绘制图表（统计图表 / CAD / SVG 线稿，黑白化后描摹）</label>
+      <label class="f"><input type="checkbox" id="dimg" checked onchange="dirty=true"> 绘制图像（普通照片素描化后排线）</label>
+    </div>
+    <div class="hint">关闭的类别留白占位（照旧自行粘贴）；SVG 恒为矢量直绘。此设置存于配置文件，随设计导入导出。</div>
+  </section>
+
+  <section class="grid3">
+    <div class="card">
+      <h3>机器预设</h3>
+      <div class="row">
+        <label class="f">落笔 Z <input type="text" id="zon" class="xs"></label>
+        <label class="f">抬笔 Z <input type="text" id="zoff" class="xs"></label>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <label class="f">画线 <input type="text" id="spd" class="sm"></label>
+        <label class="f">空程 <input type="text" id="trv" class="sm"></label>
+        <span class="hint">mm/min</span>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <label class="f">停靠 X <input type="text" id="pkx" class="sm"></label>
+        <label class="f">Y <input type="text" id="pky" class="sm"></label>
+        <span class="hint">机器坐标</span>
+      </div>
+      <div class="row">
+        <label class="f">定位点 X <input type="text" id="dotx" class="sm"></label>
+        <label class="f">Y <input type="text" id="doty" class="sm"></label>
+        <label class="f"><input type="checkbox" id="vdot"> 开始前画定位点</label>
+      </div>
+      <div class="divider"></div>
+      <div class="mgroup" id="row-off" onmouseenter="showBubble('offset', this)" onmouseleave="hideBubble()">
+        <div class="mtitle">位置偏移　<span class="hint">整页字迹整体平移，单位 mm</span></div>
+        <div class="row grow">
+          <span class="gl">左右</span>
+          <input type="range" id="tox-r" class="slider" min="-60" max="60" step="0.5">
+          <input type="text" id="tox" class="xs">
+          <span class="hint">X</span>
+        </div>
+        <div class="row grow">
+          <span class="gl">上下</span>
+          <input type="range" id="toy-r" class="slider" min="-60" max="60" step="0.5">
+          <input type="text" id="toy" class="xs">
+          <span class="hint">Y</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="mgroup" id="row-tilt" onmouseenter="showBubble('tilt', this)" onmouseleave="hideBubble()">
+        <div class="mtitle">落笔深浅修正　<span class="hint">纸面倾斜补偿，各 ±1mm</span></div>
+        <div class="row grow">
+          <span class="gl">右边缘</span>
+          <input type="range" id="tlx-r" class="slider" min="-1" max="1" step="0.05">
+          <input type="text" id="tlx" class="xs">
+          <span class="hint">+</span>
+        </div>
+        <div class="row grow">
+          <span class="gl">下边缘</span>
+          <input type="range" id="tly-r" class="slider" min="-1" max="1" step="0.05">
+          <input type="text" id="tly" class="xs">
+          <span class="hint">+</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+    </div>
+
+    <div class="card">
+      <h3>内容</h3>
+      <div class="row">
+        <label class="f">纸张 <input type="text" id="pw" class="xs"> × <input type="text" id="ph" class="xs"> mm</label>
+      </div>
+      <div class="row">
+        <label class="f">正文区 x <input type="text" id="bx" class="xs"> y <input type="text" id="by" class="xs">
+          宽 <input type="text" id="bw" class="xs"> 高 <input type="text" id="bh" class="xs"></label>
+        <button class="btn mini" onclick="testBody()">测</button>
+      </div>
+      <div class="hint" style="margin:2px 0 8px">正文区为默认编辑对象（不可删除），续写页已并入正文区</div>
+      <table class="slots" id="slotrows">
+        <tr><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>
+      </table>
+      <div class="row" style="margin-top:9px">
+        <button class="btn" onclick="addSlot()">添加栏位</button>
+      </div>
+      <div class="hint hint-doc">
+        <div><b>值 · 公式</b>　按表达式求值。变量：<code>stem</code> 文件名　<code>name</code> 全名　<code>idx</code> 第几份　<code>page</code> 第几页　<code>today</code> 日期</div>
+        <div>　　　　　　函数：<code>str</code> <code>int</code> <code>upper</code> <code>lower</code> <code>pad(n,w)</code> <code>replace</code> <code>slice</code> <code>len</code> <code>if(c,a,b)</code></div>
+        <div>　　　　　　例：<code>stem</code>　<code>stem + " " + str(idx)</code>　<code>if(page == 1, stem, "续")</code></div>
+        <div><b>写入页</b>　在第几页写：<code>1</code>　<code>1,3</code>　<code>2-4</code>　<code>all</code>（留空 = 仅第 1 页）</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>整体模板预览</h3>
+      <svg id="tplsvg"></svg>
+      <div class="row">
+        <label class="f">缩放 <input type="range" id="tplZoom" class="slider" min="1" max="4" step="0.25" value="1" oninput="tplZoomChanged()"></label>
+        <button class="btn mini" onclick="$('bgInput').click()">导入背景</button>
+        <input type="file" id="bgInput" accept="image/*" hidden onchange="bgPicked(event)">
+        <button class="btn mini" onclick="detectBg()">识别元素</button>
+        <span class="hint">滚轮缩放 / 拖空白平移</span>
+      </div>
+      <div class="hint" style="margin-top:4px">拖动标记/边框调整元件（自动吸附 0.5mm 网格）；拖方块手柄改宽度；空白处或框内拖动 = 平移视图；改动自动同步左侧数值</div>
+      <div class="row">
+        <button class="btn primary" onclick="saveDesign(false)">保存设计</button>
+        <button class="btn" onclick="exportDesign()">导出设计</button>
+        <label class="btn" style="margin:0">导入设计 <input type="file" id="importFile" accept=".json,application/json" hidden onchange="importDesign()"></label>
+      </div>
+      <div class="hint" id="bgNote"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>日志 / 断点</h3>
+    <div id="status">…</div>
+  </section>
+</main>
+
+<div class="bubble" id="bubble-offset" hidden>
+  <div class="bubble-head">位置偏移效果示意</div>
+  <svg viewBox="0 0 220 150" class="bsvg">
+    <rect x="35" y="12" width="150" height="126" rx="2" fill="#f8fafc" stroke="#d0d5dd"/>
+    <circle cx="110" cy="75" r="3" fill="#98a2b3"/>
+    <g id="offMarker">
+      <line x1="104" y1="75" x2="116" y2="75" stroke="#2e7df6" stroke-width="1.3"/>
+      <line x1="110" y1="69" x2="110" y2="81" stroke="#2e7df6" stroke-width="1.3"/>
+    </g>
+  </svg>
+  <div class="hint">灰点 = 原始落点，蓝十字 = 平移后的落点（随左右/上下实时移动）</div>
+</div>
+
+<div class="bubble" id="bubble-tilt" hidden>
+  <div class="bubble-head">落笔深浅修正效果示意</div>
+  <div class="plane-wrap"><div class="plane3d" id="tiltPlane"><div class="pgrid"></div></div></div>
+  <div class="hint">纸面随「右边缘 / 下边缘」实时倾斜：正值 = 该侧下沉、落笔更深（左上角为基准）</div>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-text" id="modalText"></div>
+    <div class="input-wrap" id="modalWrap" hidden>
+      <input type="text" id="modalInput" class="modal-input">
+      <div class="ghost" id="modalGhost"></div>
+      <div class="flag" id="modalFlag"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" id="modalCancel" hidden>取消</button>
+      <button class="btn primary" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov" hidden onclick="ovClick(event)">
+  <div class="ov-arrow left" onclick="viewStep(-1);event.stopPropagation()" title="上一页（←）">‹</div>
+  <div class="ov-arrow right" onclick="viewStep(1);event.stopPropagation()" title="下一页（→）">›</div>
+  <div class="ov-box">
+    <div class="ov-head">
+      <strong id="ovName"></strong>
+      <span class="hint" id="ovCount"></span>
+    </div>
+    <div class="ov-body">
+      <div class="page-wrap" id="ovWrap">
+        <div class="stage" id="ovStage">
+          <img id="ovImg" alt="页面预览" draggable="false">
+          <div class="hl veil" id="ovVeil" hidden></div>
+          <div class="hl" id="ovHl" hidden></div>
+          <div class="hl-line" id="ovHlLine" hidden></div>
+          <div class="badge" id="ovBadge" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const num = (v,d) => { v = parseFloat(v); return isFinite(v) ? v : (d||0); };
+const r2 = v => Math.round(v*100)/100;
+let tplData = {}, machineSnap = null, dirty = false, drag = null;
+let stackData = null, stackTs = 0, viewer = null, stateKey = null, pendingKey = null;
+let queueData = [];
+
+/* ---------- 起点/完成态 ---------- */
+function startState(){
+  return {rep: Math.max(1, +$('fr').value || 1), page: Math.max(1, +$('fp').value || 1),
+          pct: Math.min(100, Math.max(0, +$('fs').value || 0))};
+}
+function pageState(rep, page){
+  const s = startState();
+  if(rep < s.rep || (rep === s.rep && page < s.page)) return 'done';
+  if(rep === s.rep && page === s.page) return 'start';
+  return 'todo';
+}
+function pileState(idx){
+  const s = startState();
+  if(idx < s.rep) return 'done';
+  if(idx === s.rep) return 'start';
+  return 'todo';
+}
+function startChanged(){
+  if(!stackData) return;
+  renderStacks();
+  if(viewer){
+    // 修改起点自动更新预览：纸堆角标/未写蒙版重算，查看器自动跳到起点页
+    const s = startState();
+    const i = stackData.files.findIndex(f => f.idx === s.rep);
+    if(i >= 0){
+      viewer.i = i;
+      viewer.p = Math.min(Math.max(1, s.page), stackData.files[i].page_count || 1);
+    }
+    drawViewer();
+  }
+}
+function setNote(msg){
+  $('importNote').textContent = msg || '';
+}
+function fileB64(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+async function loadQueue(){
+  try{
+    const q = await (await fetch('/api/queue')).json();
+    queueData = q.files || [];
+    renderStacks();
+  }catch(e){}
+}
+async function addFiles(fileList){
+  const files = Array.from(fileList || []).filter(f => /\.(docx?|pdf|xlsx|xlsm|xmind)$/i.test(f.name));
+  if(!files.length){ uiAlert('只支持 doc / docx / pdf / xlsx / xmind'); return; }
+  setNote('正在定位 ' + files.length + ' 个文件…');
+  const meta = files.map(f => ({name: f.name, size: f.size}));
+  const loc = await api('locate-files', {files: meta});
+  const paths = [], need = [];
+  (loc.results || []).forEach((r, i) => {
+    if(r.path){ paths.push(r.path); } else { need.push(files[i]); }
+  });
+  if(need.length){
+    setNote('正在导入 ' + need.length + ' 个未定位文件的副本…');
+    const payload = [];
+    for(const f of need){ payload.push({name: f.name, data: await fileB64(f)}); }
+    const j = await api('import-files', {folder: '导入-' + Date.now(), files: payload});
+    if(j.ok && j.paths){ paths.push(...j.paths); }
+    else if(!j.ok){ uiAlert('导入失败: ' + (j.err || '')); }
+  }
+  if(paths.length){
+    const r = await api('queue-add', {paths: paths});
+    setNote('已加入队列 ' + ((r && r.added) || 0) + ' 个文件');
+    autoPreview();   // 导入后自动更新预览
+  }else{
+    setNote('');
+  }
+  loadQueue();
+}
+function onFilesPicked(ev){
+  const inp = $('_fileInput');
+  addFiles(inp.files);
+  inp.value = '';
+}
+function removeFromQueue(i, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  api('queue-remove', {index: i}).then(loadQueue);
+}
+async function clearQueue(){
+  if(!queueData.length) return;
+  if(!(await uiConfirm('清空队列（' + queueData.length + ' 个文件）？'))) return;
+  api('queue-clear').then(loadQueue);
+}
+
+/* ---- 队列拖拽排序（FLIP 动画：拖到谁身上就插到谁旁边，平滑滑动） ---- */
+let dragFrom = null, dragMoved = false, suppressClick = false;
+function flipReorder(mutate){
+  const el = $('stacks');
+  const nodes = Array.from(el.querySelectorAll('.pile'));
+  const first = nodes.map(n => n.getBoundingClientRect());
+  mutate();
+  Array.from(el.querySelectorAll('.pile')).forEach(n => {
+    const oi = nodes.indexOf(n);
+    if(oi < 0) return;
+    const f = first[oi], l = n.getBoundingClientRect();
+    const dx = f.left - l.left, dy = f.top - l.top;
+    if(dx || dy){
+      n.style.transition = 'none';
+      n.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      requestAnimationFrame(() => {
+        n.style.transition = 'transform .22s ease';
+        n.style.transform = '';
+      });
+    }
+  });
+}
+function pileDragStart(e, i){
+  dragFrom = i; dragMoved = false; suppressClick = true;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(i));
+  e.currentTarget.classList.add('dragging');
+}
+function pileDragOver(e){
+  if(dragFrom === null) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const over = e.currentTarget.closest ? e.currentTarget.closest('.pile') : null;
+  if(!over) return;
+  const to = +over.dataset.qi;
+  if(to === dragFrom) return;
+  const dragging = $('stacks').querySelector('.pile.dragging');
+  if(!dragging) return;
+  dragMoved = true;
+  flipReorder(() => {
+    if(to > dragFrom) over.after(dragging); else over.before(dragging);
+  });
+  dragFrom = to;
+}
+function pileDrop(e){
+  e.preventDefault();
+  commitOrder();
+}
+function pileDragEnd(){
+  const el = $('stacks');
+  if(dragFrom !== null && dragMoved) commitOrder();
+  dragFrom = null;
+  el.querySelectorAll('.pile').forEach(n => n.classList.remove('dragging'));
+}
+async function commitOrder(){
+  const order = Array.from($('stacks').querySelectorAll('.pile'))
+    .map(n => (queueData[+n.dataset.qi] || {}).path).filter(Boolean);
+  await api('queue-reorder', {paths: order});
+  loadQueue();
+}
+function pileClick(i){
+  if(dragMoved || suppressClick){ dragMoved = false; suppressClick = false; return; }
+  const q = queueData[i];
+  if(!q) return;
+  const man = (stackData && stackData.files) || [];
+  const j = man.findIndex(f => f.name === q.name);
+  if(j >= 0){ openViewer(j); }
+  else { uiAlert('「' + q.name + '」还没有预览图：点右上「生成预览」后再看'); }
+}
+
+/* ---------- 运行控制 ---------- */
+async function api(op, body){
+  const r = await fetch('/api/'+op, {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body || {})});
+  return await r.json();
+}
+function taskBody(){
+  return {};
+}
+async function runOp(op){
+  const j = await api(op, taskBody());
+  if(!j.ok) uiAlert('失败: '+(j.err||''));
+  refresh();
+}
+let previewTimer = null;
+async function autoPreview(){
+  // 队列变化后自动生成预览（合并短时间内的连续导入）
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    $('importNote').innerHTML = '<span class="spin"></span>正在生成预览…';
+    const j = await api('preview', taskBody());
+    if(!j.ok) $('importNote').textContent = '预览失败: ' + (j.err || '');
+  }, 500);
+}
+async function startFrom(){
+  if(dirty){
+    if(!(await uiConfirm('设计有未保存更改。先保存设计并开始？'))) return;
+    const ok = await saveDesign(true);
+    if(!ok) return;
+  }
+  const body = taskBody();
+  body.from_report = +$('fr').value || 0;
+  body.report_page = +$('fp').value || 0;
+  body.progress = +$('fs').value || 0;
+  const j = await api('start', body);
+  if(!j.ok) uiAlert('失败: '+(j.err||''));
+  refresh();
+}
+async function refresh(){
+  try{
+    const j = await (await fetch('/status')).json();
+    const pill = $('run'), t = $('runText');
+    if(j.running){ pill.className = 'pill on'; t.textContent = '运行中 ' + (j.started||'') + ' · 串口 ' + (j.port||'?'); }
+    else { pill.className = 'pill'; t.textContent = '空闲 · 串口 ' + (j.port||'?'); }
+    $('status').textContent = (j.log||[]).join('\n') + (j.state ? '\n\n断点: ' + JSON.stringify(j.state) : '');
+    if(j.state){
+      $('brk').textContent = j.state.label
+        ? ('断点：' + j.state.label + ' · 页内 ' + (j.state.progress_pct != null ? (+j.state.progress_pct).toFixed(3) : '?') + '%')
+        : ('断点可续：' + (j.state.reason||''));
+      // 暂停/停止后：只自动回填「进度%」；文件/页码永远手动管理。
+      // 防抖：断点须连续两轮轮询稳定才采用——多任务重叠期的抖动/竞写不再乱跳
+      if(!j.running && j.state.report_idx != null){
+        const key = [j.state.saved_at, j.state.lines_done, j.state.report_idx,
+                     j.state.report_page, j.state.progress_pct].join('|');
+        if(stateKey === null){
+          stateKey = key;              // 首屏只记录，不覆盖任何输入
+        }else if(key !== stateKey){
+          if(key !== pendingKey){
+            pendingKey = key;          // 新断点先观察一轮，稳定才采用
+          }else{
+            stateKey = key;
+            pendingKey = null;
+            const focused = document.activeElement &&
+                            ['fr','fp','fs'].includes(document.activeElement.id);
+            if(!focused){
+              $('fs').value = j.state.progress_pct != null ? (+j.state.progress_pct).toFixed(3) : '0';
+              startChanged();
+            }
+          }
+        }
+      }
+    }else{
+      $('brk').textContent = '';
+    }
+  }catch(e){}
+  loadStacks();
+  loadQueue();
+}
+
+/* ---------- 文件纸堆 ---------- */
+async function loadStacks(){
+  try{
+    const j = await (await fetch('/api/stacks')).json();
+    if(j.ts === stackTs) return;
+    const firstLoad = stackTs === 0;
+    stackTs = j.ts; stackData = j;
+    renderStacks();
+    if(!firstLoad){ $('importNote').textContent = ''; }  // 预览生成完成，清加载提示
+    // 生成预览后自动跳到当前起点位置（首屏只渲染不弹层）
+    if(!firstLoad){
+      const s = startState();
+      const i = stackData.files.findIndex(f => f.idx === s.rep);
+      openViewer(i >= 0 ? i : 0);
+    }
+  }catch(e){}
+}
+function renderStacks(){
+  const el = $('stacks');
+  if(!queueData.length){
+    el.innerHTML = '<div class="hint">队列为空：点「添加文件…」或拖拽文件到此处加入。</div>';
+    return;
+  }
+  const man = (stackData && stackData.files) || [];
+  el.innerHTML = queueData.map((q, i) => {
+    const m = man.find(f => f.name === q.name) || null;
+    const st = pileState(i + 1);
+    const tag = st === 'done' ? '<div class="tag">已完成</div>'
+              : st === 'start' ? '<div class="tag start">起点</div>' : '';
+    const img = m ? '<img draggable="false" src="/page.png?img=f' + m.idx + 'p1.png&ts=' + stackData.ts + '" alt="">' : '';
+    const n = m ? Math.max(1, Math.min(3, m.page_count || 1)) : 1;
+    let cards = '';
+    for(let k = n; k >= 1; k--){
+      cards += '<div class="pcard c' + k + '">' + (k === 1 ? img : '') + '</div>';
+    }
+    return `
+    <div class="pile" draggable="true" data-qi="${i}" title="${esc(q.name)}"
+         ondragstart="pileDragStart(event,${i})" ondragover="pileDragOver(event)"
+         ondrop="pileDrop(event)" ondragend="pileDragEnd()"
+         onclick="pileClick(${i})">
+      <div class="pile-cards">
+        <div class="pile-x" onclick="removeFromQueue(${i}, event)" title="从队列移除">×</div>
+        ${tag}
+        ${cards}
+        <div class="wm">#${i + 1}</div>
+      </div>
+      <div class="pile-name">${esc(q.name)}</div>
+      <div class="pile-pages">${m ? m.page_count + ' 页' : '未预览'}</div>
+    </div>`;
+  }).join('');
+}
+function openViewer(i, p){
+  const s = startState();
+  const f = stackData.files[i];
+  viewer = {i: i, p: p || (f.idx === s.rep ? Math.min(Math.max(1, s.page), f.page_count) : 1)};
+  $('ov').hidden = false;
+  drawViewer();
+}
+function closeViewer(){ $('ov').hidden = true; viewer = null; }
+function ovClick(e){
+  // 标题部/按钮/箭头区/图片区除外的空白（含图上方空隙）点击退出
+  const t = e.target;
+  if(t && t.closest && t.closest('.ov-head, .stage, button, .ov-arrow')) return;
+  closeViewer();
+}
+function viewStep(d){
+  if(!viewer || !stackData) return;
+  const f = stackData.files[viewer.i];
+  viewer.p = Math.min(f.page_count, Math.max(1, viewer.p + d));
+  drawViewer();
+}
+function drawViewer(){
+  const f = stackData.files[viewer.i];
+  imgZoom = 1; imgPan = {x: 0, y: 0};
+  $('ovName').textContent = f.name + '（排队 #' + f.idx + '）';
+  $('ovCount').textContent = viewer.p + ' / ' + f.page_count;
+  $('ovImg').src = '/page.png?img=f' + f.idx + 'p' + viewer.p + '.png&ts=' + stackData.ts;
+  applyImgTransform();
+  // 完成页绿色高亮；进行中页=已写部分可见、未写部分蒙版（不再画高亮带）
+  const st = pageState(f.idx, viewer.p);
+  const hl = $('ovHl'), line = $('ovHlLine'), badge = $('ovBadge'), veil = $('ovVeil');
+  const d = collectTpl();
+  const bodyTop = d.body.y / Math.max(1, d.paper_h) * 100;
+  const bodyH = d.body.h / Math.max(1, d.paper_h) * 100;
+  hl.hidden = true; line.hidden = true; badge.hidden = true; veil.hidden = true;
+  if(st === 'done'){
+    hl.hidden = false; hl.style.top = '0'; hl.style.height = '100%';
+    badge.hidden = false; badge.className = 'badge'; badge.textContent = '已完成';
+    badge.style.background = '';
+  }else if(st === 'start'){
+    const s = startState();
+    const ym = (f.ymarks || [])[viewer.p - 1];
+    let doneTo;
+    if(ym && ym.length >= 2){
+      const t = Math.max(0, Math.min(100, s.pct)) / 10;
+      const i = Math.min(ym.length - 2, Math.floor(t));
+      const y = ym[i] + (ym[i + 1] - ym[i]) * (t - i);   // 笔画进度→真实 y
+      doneTo = Math.max(bodyTop, Math.min(100, y / Math.max(1, d.paper_h) * 100));
+    }else{
+      doneTo = bodyTop + bodyH * s.pct / 100;
+    }
+    veil.hidden = false;
+    veil.style.top = doneTo + '%';
+    veil.style.height = Math.max(0, 100 - doneTo) + '%';
+    badge.hidden = false;
+    badge.className = 'badge';
+    badge.style.background = '#475467';
+    badge.textContent = '已写 ' + (+$('fs').value || 0).toFixed(3) + '%';
+  }else{
+    hl.hidden = true; line.hidden = true; badge.hidden = true;
+  }
+}
+document.addEventListener('keydown', e => {
+  if(!viewer) return;
+  if(e.key === 'Escape') closeViewer();
+  else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') viewStep(-1);
+  else if(e.key === 'ArrowRight' || e.key === 'ArrowDown') viewStep(1);
+});
+
+/* ---------- 模板表单 ---------- */
+function fillForm(d){
+  $('pw').value = d.paper_w; $('ph').value = d.paper_h;
+  $('tox').value = d.offset_x || 0; $('toy').value = d.offset_y || 0;
+  $('tlx').value = d.tilt_x != null ? d.tilt_x : 0;
+  $('tly').value = d.tilt_y != null ? d.tilt_y : 0;
+  $('pkx').value = d.park_x != null ? d.park_x : 210;
+  $('pky').value = d.park_y != null ? d.park_y : 0;
+  $('dotx').value = d.dot_x != null ? d.dot_x : 20;
+  $('doty').value = d.dot_y != null ? d.dot_y : 0;
+  $('zon').value = d.z_on != null ? d.z_on : 10;
+  $('zoff').value = d.z_off != null ? d.z_off : 0;
+  $('spd').value = d.feed != null ? d.feed : 4800;
+  $('trv').value = d.travel != null ? d.travel : 5000;
+  $('vdot').checked = !!d.verify_dot;
+  const b = d.body || {x:25, y:32, w:150, h:210};
+  $('bx').value = b.x; $('by').value = b.y; $('bw').value = b.w; $('bh').value = b.h;
+  $('dchart').checked = d.draw_charts !== false;
+  $('dimg').checked = d.draw_images !== false;
+  bgImage = d.bg_image || '';
+  rebuildSlots();
+  syncSliders();
+  updateBubble();
+}
+function rebuildSlots(){
+  const tb = $('slotrows');
+  tb.innerHTML = '<tr><th>栏位</th><th>值</th><th>x</th><th>y</th><th>字高</th><th>最宽</th><th>写入页</th><th>写</th><th></th></tr>';
+  for(const name in (tplData.slots || {})){
+    const s = tplData.slots[name];
+    addSlotRow(name, s.value != null ? s.value : '', s.x, s.y, s.size != null ? s.size : 5,
+               s.max_w != null ? s.max_w : 20, s.pages != null ? s.pages : '1',
+               s.enabled !== false, s.mode != null ? s.mode : 'text');
+  }
+}
+function addSlotRow(name, value, x, y, size, mw, pages, enabled, mode){
+  const tb = $('slotrows');
+  const tr = document.createElement('tr');
+  const isFx = mode === 'formula';
+  const ph4 = isFx ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
+  tr.innerHTML = '<td><input class="sname" value="' + esc(name) + '"></td>' +
+    '<td class="vcell"><select class="smode"><option value="text"' + (isFx ? '' : ' selected') + '>文本</option>' +
+    '<option value="formula"' + (isFx ? ' selected' : '') + '>公式</option></select>' +
+    '<input class="sval' + (isFx ? ' fx' : '') + '" value="' + esc(value) + '" placeholder="' + ph4 + '"></td>' +
+    '<td><input class="sx" value="' + esc(x) + '"></td>' +
+    '<td><input class="sy" value="' + esc(y) + '"></td>' +
+    '<td><input class="ss" value="' + esc(size) + '"></td>' +
+    '<td><input class="sw" value="' + esc(mw) + '"></td>' +
+    '<td><input class="sp" value="' + esc(pages != null ? pages : '1') + '" placeholder="1"></td>' +
+    '<td style="text-align:center"><input type="checkbox" class="sen"' + (enabled ? ' checked' : '') + '></td>' +
+    '<td style="white-space:nowrap"><button class="btn mini" onclick="testSlot(this)">测</button> ' +
+    '<button class="btn mini danger" onclick="delSlot(this)">删</button></td>';
+  tb.appendChild(tr);
+  const sel = tr.querySelector('.smode');
+  sel.addEventListener('change', () => {
+    const on = sel.value === 'formula';
+    const inp = tr.querySelector('.sval');
+    inp.classList.toggle('fx', on);
+    inp.placeholder = on ? 'stem 或 stem + " " + str(idx)' : (name === '题目' ? '留空=文件名' : '');
+    dirty = true; renderTpl();
+  });
+  tr.querySelectorAll('input').forEach(i => {
+    i.addEventListener('input', () => { dirty = true; renderTpl(); });
+    i.addEventListener('change', () => { dirty = true; renderTpl(); });
+  });
+}
+function addSlot(){
+  tplData.slots = collectSlots();
+  tplData.slots['新栏位'] = {x: 25, y: 45, size: 5, max_w: 20, value: '', pages: '1', enabled: true, mode: 'text'};
+  rebuildSlots();
+  dirty = true;
+  renderTpl();
+}
+async function delSlot(btn){
+  const tr = btn.closest('tr');
+  const name = tr.querySelector('.sname').value;
+  if(name === '题目' || name === '姓名' || name === '专业班次'){
+    if(!(await uiConfirm('删除「' + name + '」栏位及其值？'))) return;
+  }
+  tr.remove();
+  dirty = true;
+  renderTpl();
+}
+function slotRow(name){
+  const rows = document.querySelectorAll('#slotrows tr');
+  for(let i = 1; i < rows.length; i++){
+    const n = rows[i].querySelector('.sname');
+    if(n && n.value === name) return rows[i];
+  }
+  return null;
+}
+function testSlot(btn){
+  const tr = btn.closest('tr'), q = s => tr.querySelector(s).value;
+  api('test-slot', {x: +q('.sx'), y: +q('.sy'), max_w: +q('.sw')})
+    .then(j => uiAlert(j.ok ? '定位测试标记已发送（十字 + 可写宽线）' : ('失败: ' + (j.err||''))));
+}
+async function cal(mode){
+  // 校准绘制恒带编辑器当前值（template-live.json 通道，所见即所画）
+  const j = await api('calibrate', {mode: mode, tpl: collectTpl()});
+  uiAlert(j.ok ? '校准标记已发送（请放废纸观察）' : ('失败: ' + (j.err||'')));
+}
+function collectSlots(){
+  const slots = {};
+  document.querySelectorAll('#slotrows tr').forEach((tr, i) => {
+    if(i === 0) return;
+    const q = s => tr.querySelector(s).value;
+    const name = q('.sname').trim();
+    if(!name) return;
+    slots[name] = {x: num(q('.sx')), y: num(q('.sy')), size: num(q('.ss'), 5),
+                   max_w: num(q('.sw'), 20), value: q('.sval'),
+                   pages: (q('.sp') || '').trim() || '1',
+                   enabled: tr.querySelector('.sen').checked,
+                   mode: tr.querySelector('.smode').value};
+  });
+  return slots;
+}
+function collectTpl(){
+  return {
+    paper_w: num($('pw').value, 165), paper_h: num($('ph').value, 230),
+    bg_image: bgImage || '',
+    skip: (Array.isArray(tplData.skip) ? tplData.skip : (tplData.skip ? [tplData.skip] : [])),
+    draw_charts: $('dchart').checked,
+    draw_images: $('dimg').checked,
+    offset_x: num($('tox').value), offset_y: num($('toy').value),
+    tilt_x: Math.max(-1, Math.min(1, num($('tlx').value))),
+    tilt_y: Math.max(-1, Math.min(1, num($('tly').value))),
+    park_x: num($('pkx').value), park_y: num($('pky').value),
+    dot_x: num($('dotx').value), dot_y: num($('doty').value),
+    z_on: $('zon').value === '' ? 10 : num($('zon').value),
+    z_off: $('zoff').value === '' ? 0 : num($('zoff').value),
+    feed: $('spd').value === '' ? 4800 : num($('spd').value),
+    travel: $('trv').value === '' ? 5000 : num($('trv').value),
+    verify_dot: $('vdot').checked,
+    body: {x: num($('bx').value), y: num($('by').value), w: num($('bw').value), h: num($('bh').value)},
+    slots: collectSlots()
+  };
+}
+function snapshotMachine(){
+  const m = collectTpl();
+  return {offset_x:m.offset_x, offset_y:m.offset_y, park_x:m.park_x, park_y:m.park_y,
+          dot_x:m.dot_x, dot_y:m.dot_y, z_on:m.z_on, z_off:m.z_off,
+          feed:m.feed, travel:m.travel, verify_dot:m.verify_dot,
+          tilt_x:m.tilt_x, tilt_y:m.tilt_y};
+}
+function machineChanged(){
+  if(!machineSnap) return false;
+  const m = snapshotMachine();
+  for(const k in m){ if(String(m[k]) !== String(machineSnap[k])) return true; }
+  return false;
+}
+async function saveDesign(silent){
+  if(machineChanged()){
+    uiAlert('机器预设有未确认的改动：请先在「机器预设」栏完成失焦复输确认（或还原原值）再保存设计。');
+    return false;
+  }
+  if(!silent && !(await uiConfirm('确认保存设计更改？（旧版自动备份）'))) return false;
+  const j = await api('template', collectTpl());
+  if(!j.ok){ uiAlert('失败: ' + (j.err||'')); return false; }
+  dirty = false;
+  if(!silent) uiAlert('设计已保存');
+  return true;
+}
+function machineDict(){
+  return {
+    offset_x: num($('tox').value), offset_y: num($('toy').value),
+    tilt_x: Math.max(-1, Math.min(1, num($('tlx').value))),
+    tilt_y: Math.max(-1, Math.min(1, num($('tly').value))),
+    park_x: num($('pkx').value), park_y: num($('pky').value),
+    dot_x: num($('dotx').value), dot_y: num($('doty').value),
+    z_on: $('zon').value === '' ? 10 : num($('zon').value),
+    z_off: $('zoff').value === '' ? 0 : num($('zoff').value),
+    feed: $('spd').value === '' ? 4800 : num($('spd').value),
+    travel: $('trv').value === '' ? 5000 : num($('trv').value),
+    verify_dot: $('vdot').checked
+  };
+}
+async function saveMachineValues(){
+  const j = await api('save-machine', machineDict());
+  if(j.ok){
+    machineSnap = snapshotMachine();
+  }else{
+    uiAlert('保存失败: ' + (j.err || ''));
+  }
+}
+const M_LABELS = {zon: '落笔 Z', zoff: '抬笔 Z', spd: '画线速度', trv: '空程速度',
+  pkx: '停靠 X', pky: '停靠 Y', dotx: '定位点 X', doty: '定位点 Y',
+  tox: '位置偏移 左右', toy: '位置偏移 上下',
+  tlx: '落笔深浅修正 右边缘', tly: '落笔深浅修正 下边缘'};
+/* ---------- 居中模态弹窗（替代浏览器原生 alert/confirm/prompt） ---------- */
+function uiModal(o){
+  return new Promise(res => {
+    const m = $('modal');
+    $('modalTitle').textContent = o.title || '提示';
+    $('modalText').innerHTML = o.text || '';
+    const inp = $('modalInput');
+    const wrap = $('modalWrap');
+    const ghost = $('modalGhost');
+    wrap.hidden = !o.input;
+    inp.value = o.input ? (o.value || '') : '';
+    inp.placeholder = o.placeholder || '';
+    inp.classList.remove('ok', 'bad');
+    ghost.innerHTML = '';
+    $('modalFlag').textContent = '';
+    $('modalFlag').className = 'flag';
+    $('modalCancel').hidden = !o.cancel;
+    $('modalOk').textContent = o.ok || '确定';
+    m.hidden = false;
+    const done = v => {
+      m.hidden = true;
+      $('modalOk').onclick = $('modalCancel').onclick = null;
+      inp.onkeydown = null;
+      inp.oninput = null;
+      m.onclick = null;
+      res(v);
+    };
+    // 提示全程在文本框内：占位符=要求值；输入中幽灵灰字显示剩余；一致绿框、不符红框
+    const upd = () => {
+      const t = String(o.target || '');
+      const c = inp.value;
+      let st = '';
+      if(o.validate) st = (o.validate(c) || {}).state || '';
+      else if(t) st = !c ? '' : (c === t ? 'ok' : (t.indexOf(c) === 0 ? '' : 'bad'));
+      inp.classList.remove('ok', 'bad');
+      if(st === 'ok') inp.classList.add('ok');
+      else if(st === 'bad') inp.classList.add('bad');
+      // 相符指示固定输入框最右侧：仅对勾或叉
+      const flag = $('modalFlag');
+      flag.className = 'flag' + (st === 'ok' ? ' ok' : st === 'bad' ? ' bad' : '');
+      flag.textContent = st === 'ok' ? '✓' : st === 'bad' ? '✗' : '';
+      // 框内幽灵字：仅显示剩余待输入内容（与已输入部分严格对齐）
+      let rest = '';
+      if(t && c && t.indexOf(c) === 0) rest = t.slice(c.length);
+      ghost.innerHTML = '';
+      const a = document.createElement('span');
+      a.className = 't';
+      a.textContent = c;
+      const b = document.createElement('span');
+      b.textContent = rest;
+      ghost.appendChild(a);
+      ghost.appendChild(b);
+    };
+    if(o.input){ inp.oninput = upd; upd(); }
+    $('modalOk').onclick = () => done(o.input ? inp.value : true);
+    $('modalCancel').onclick = () => done(null);
+    m.onclick = e => { if(e.target === m && o.cancel) done(null); };
+    inp.onkeydown = e => {
+      if(e.key === 'Enter') done(inp.value);
+      if(e.key === 'Escape') done(null);
+    };
+    if(o.input){ inp.focus(); inp.select(); } else { $('modalOk').focus(); }
+  });
+}
+function uiAlert(text, title){ return uiModal({title: title || '提示', text: text, ok: '知道了'}); }
+function uiConfirm(text, title){ return uiModal({title: title || '确认', text: text, ok: '确定', cancel: true}); }
+function uiPrompt(text, def, title){ return uiModal({title: title || '输入确认', text: text, input: true, value: def || '', ok: '确定', cancel: true}); }
+function uiConfirmValue(label, oldV, newV){
+  const t = String(newV);
+  return uiModal({
+    title: '安全确认',
+    text: '「' + label + '」 从 <b>' + oldV + '</b> →',
+    input: true,
+    value: '',
+    target: t,
+    placeholder: t,
+    ok: '确定',
+    cancel: true
+  });
+}
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function syncSliders(){
+  [['tox-r','tox',-60,60], ['toy-r','toy',-60,60], ['tlx-r','tlx',-1,1], ['tly-r','tly',-1,1]]
+    .forEach(([s, i, a, b]) => { $(s).value = clamp(num($(i).value), a, b); });
+}
+function updateBubble(){
+  const mk = $('offMarker');
+  if(mk){
+    mk.style.transform = 'translate(' + (num($('tox').value) * 1.2) + 'px,' + (num($('toy').value) * 1.2) + 'px)';
+  }
+  const pl = $('tiltPlane');
+  if(pl){
+    pl.style.transform = 'rotateX(' + (-num($('tly').value) * 20) + 'deg) rotateY(' + (num($('tlx').value) * 20) + 'deg)';
+  }
+}
+let bubbleTimer = null, bubbleAnchor = null;
+function placeBubble(){
+  if(!bubbleAnchor) return;
+  const b = $('bubble-' + bubbleAnchor.kind);
+  if(b.hidden) return;
+  const r = bubbleAnchor.el.getBoundingClientRect();
+  if(r.bottom < 0 || r.top > window.innerHeight){ b.hidden = true; return; }
+  const left = Math.max(8, Math.min(window.innerWidth - 300, r.left));
+  let top = r.top - b.offsetHeight - 10;          // 默认在上方
+  if(top < 8) top = Math.min(window.innerHeight - b.offsetHeight - 8, r.bottom + 10); // 放不下落下方
+  b.style.left = left + 'px';
+  b.style.top = Math.max(8, top) + 'px';
+}
+function showBubble(kind, el){
+  clearTimeout(bubbleTimer);
+  const b = $('bubble-' + kind);
+  document.querySelectorAll('.bubble').forEach(x => x.hidden = true);
+  b.hidden = false;
+  bubbleAnchor = {kind: kind, el: el};
+  placeBubble();
+  updateBubble();
+}
+function hideBubble(){
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => {
+    document.querySelectorAll('.bubble').forEach(x => x.hidden = true);
+    bubbleAnchor = null;
+  }, 180);
+}
+window.addEventListener('scroll', placeBubble, true);
+window.addEventListener('resize', placeBubble);
+function bindMField(id, sliderId){
+  const inp = $(id), sl = sliderId ? $(sliderId) : null;
+  const group = [inp].concat(sl ? [sl] : []);
+  let snap = null;
+  const onIn = () => { if(snap === null) snap = inp.value; };
+  const onOut = () => setTimeout(async () => {
+    if(group.indexOf(document.activeElement) >= 0) return;
+    if(snap === null) return;
+    const before = snap;
+    snap = null;
+    if(String(inp.value) === String(before)) return;
+    // 安全保险：失焦且数值变动 → 居中弹窗「元件 从 旧值 → 新值」引导复输
+    const v = await uiConfirmValue(M_LABELS[id] || id, before, inp.value);
+    const sameNum = v !== null && isFinite(parseFloat(v)) && parseFloat(v) === parseFloat(inp.value);
+    const sameTxt = v !== null && v.trim() === String(inp.value).trim();
+    if(sameNum || sameTxt){
+      saveMachineValues();
+    }else{
+      inp.value = before;
+      if(sl) sl.value = clamp(num(before), +sl.min, +sl.max);
+      updateBubble();
+      uiAlert('输入不一致，已还原原值');
+    }
+  }, 0);
+  group.forEach(el => { el.addEventListener('focus', onIn); el.addEventListener('blur', onOut); });
+  if(sl){
+    const onSl = () => { inp.value = sl.value; updateBubble(); };
+    const onInp = () => { sl.value = clamp(num(inp.value), +sl.min, +sl.max); updateBubble(); };
+    sl.addEventListener('input', onSl);
+    sl.addEventListener('change', onSl);
+    inp.addEventListener('input', onInp);
+    inp.addEventListener('change', onInp);
+  }
+}
+function testBody(){ cal('frame'); }
+
+/* ---------- 模板预览：缩放/平移/背景/识别 ---------- */
+let tplZoom = 1, tplPan = {x: 0, y: 0}, bgImage = null, viewFrozen = null;
+function tplZoomChanged(){
+  tplZoom = Math.max(1, +$('tplZoom').value || 1);
+  renderTpl();
+}
+function bgPicked(ev){
+  const f = $('bgInput').files[0];
+  $('bgInput').value = '';
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    bgImage = rd.result;
+    renderTpl();
+    $('bgNote').textContent = '背景已导入（随设计保存）';
+  };
+  rd.readAsDataURL(f);
+}
+async function detectBg(){
+  const img = bgImage;
+  if(!img){ uiAlert('请先点「导入背景」选择纸张照片/扫描图'); return; }
+  $('bgNote').textContent = '正在识别元素…';
+  const d = collectTpl();
+  const j = await api('detect-bg', {image: img, paper_w: d.paper_w, paper_h: d.paper_h});
+  if(!j.ok){ $('bgNote').textContent = '识别失败: ' + (j.err || ''); return; }
+  const lines = j.lines || [];
+  const slots = collectSlots();
+  lines.forEach((L, k) => {
+    slots['识别' + (k + 1)] = {x: Math.round(L.x * 10) / 10, y: Math.round(L.y * 10) / 10,
+      size: 4, max_w: Math.round(L.w * 10) / 10, value: '', pages: '1', enabled: true, mode: 'text'};
+  });
+  tplData.slots = slots;
+  rebuildSlots();
+  renderTpl();
+  $('bgNote').textContent = '识别到 ' + lines.length + ' 个元素，已生成草稿栏位（未保存，请核对后保存设计）';
+}
+
+/* ---------- 查看器：滚轮缩放 / 长按平移 ---------- */
+let imgZoom = 1, imgPan = {x: 0, y: 0}, pressTimer = null, panning = null;
+function applyImgTransform(){
+  $('ovStage').style.transform = 'translate(' + imgPan.x + 'px,' + imgPan.y + 'px) scale(' + imgZoom + ')';
+}
+function spawnRipple(x, y, small){
+  const d = document.createElement('div');
+  d.className = 'ripple' + (small ? ' small' : '');
+  const sz = small ? 24 : 42;
+  d.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 520);
+}
+let sbPressed = false;
+document.addEventListener('pointerdown', e => {
+  let n = e.target;
+  while(n && n !== document.body){
+    const r = n.getBoundingClientRect ? n.getBoundingClientRect() : null;
+    if(r && n.scrollHeight > n.clientHeight + 4 && e.clientX > r.right - 18){
+      spawnRipple(e.clientX, e.clientY, false); sbPressed = true; return;
+    }
+    if(r && n.scrollWidth > n.clientWidth + 4 && e.clientY > r.bottom - 18){
+      spawnRipple(e.clientX, e.clientY, false); sbPressed = true; return;
+    }
+    n = n.parentElement;
+  }
+});
+document.addEventListener('pointerup', e => {
+  if(sbPressed){ sbPressed = false; spawnRipple(e.clientX, e.clientY, true); }
+});
+function exportDesign(){
+  const data = JSON.stringify(collectTpl(), null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type: 'application/json'}));
+  a.download = 'kenjoy-design-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importDesign(){
+  const f = $('importFile').files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const d = JSON.parse(rd.result);
+      if(!d.paper_w || !d.slots){ uiAlert('不是有效的设计 JSON（缺 paper_w / slots）'); return; }
+      tplData = d;
+      fillForm(d);
+      dirty = true;
+      renderTpl();
+      uiAlert('设计已载入（尚未保存）：检查无误后点「保存设计」');
+    }catch(e){ uiAlert('解析失败: ' + e.message); }
+  };
+  rd.readAsText(f, 'utf-8');
+  $('importFile').value = '';
+}
+
+/* ---------- 整体预览（可拖动） ---------- */
+function anchors(){
+  const d = collectTpl(), b = d.body, a = [];
+  a.push({t:'paper', axis:'x', v:0}, {t:'paper', axis:'x', v:d.paper_w});
+  a.push({t:'paper', axis:'y', v:0}, {t:'paper', axis:'y', v:d.paper_h});
+  a.push({t:'body', axis:'x', v:b.x}, {t:'body', axis:'x', v:b.x + b.w});
+  a.push({t:'body', axis:'y', v:b.y}, {t:'body', axis:'y', v:b.y + b.h});
+  for(const n in d.slots){
+    a.push({t:'slot:'+n, axis:'x', v:d.slots[n].x});
+    a.push({t:'slot:'+n, axis:'x', v:d.slots[n].x + (d.slots[n].max_w || 0)});
+    a.push({t:'slot:'+n, axis:'y', v:d.slots[n].y});
+  }
+  a.push({t:'park', axis:'x', v:d.park_x}, {t:'park', axis:'y', v:d.park_y});
+  a.push({t:'dot', axis:'x', v:d.dot_x}, {t:'dot', axis:'y', v:d.dot_y});
+  return a;
+}
+function snap(v, axis, exceptTag){
+  v = Math.round(v * 2) / 2;
+  let best = null, bd = 0.8;
+  for(const a of anchors()){
+    if(a.axis !== axis || a.t === exceptTag) continue;
+    const dd = Math.abs(a.v - v);
+    if(dd < bd){ bd = dd; best = a.v; }
+  }
+  return best === null ? v : best;
+}
+function renderTpl(){
+  const d = collectTpl(), b = d.body;
+  const xs = [0, d.paper_w, b.x, b.x + b.w, d.park_x, d.dot_x];
+  const ys = [0, d.paper_h, b.y, b.y + b.h, d.park_y, d.dot_y];
+  for(const n in d.slots){
+    const s = d.slots[n];
+    xs.push(s.x, s.x + (s.max_w || 0)); ys.push(s.y);
+  }
+  const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+  const y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  const pad = 8;
+  const svg = $('tplsvg');
+  const z = Math.max(1, tplZoom || 1);
+  const bw = (x1 - x0) + pad * 2, bh = (y1 - y0) + pad * 2;
+  const vw = bw / z, vh = bh / z;
+  const cx = (x0 + x1) / 2 + (tplPan.x || 0), cy = (y0 + y1) / 2 + (tplPan.y || 0);
+  // 拖动期间冻结视图：包围盒随元件移动会重算缩放 → 指针下元件漂移 → 严重抖动
+  svg.setAttribute('viewBox', viewFrozen || ((cx - vw / 2) + ' ' + (cy - vh / 2) + ' ' + vw + ' ' + vh));
+  const p = [];
+  p.push('<rect x="0" y="0" width="' + d.paper_w + '" height="' + d.paper_h + '" fill="#fff" stroke="#c5cad3"/>');
+  if(bgImage){
+    p.push('<image href="' + bgImage + '" x="0" y="0" width="' + d.paper_w + '" height="' + d.paper_h +
+           '" opacity="0.5" preserveAspectRatio="none"/>');
+  }
+  p.push('<rect class="drag" data-el="body" x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + b.h +
+         '" fill="rgba(46,125,246,.07)" stroke="#2e7df6" stroke-dasharray="4 3" pointer-events="visibleStroke"/>');
+  p.push('<text x="' + (b.x+2) + '" y="' + (b.y+7) + '" font-size="5" fill="#2e7df6" pointer-events="none">正文区</text>');
+  p.push('<rect class="drag" data-el="body-size" x="' + (b.x+b.w-1.6) + '" y="' + (b.y+b.h-1.6) +
+         '" width="3.2" height="3.2" fill="#2e7df6"/>');
+  for(const n in d.slots){
+    const s = d.slots[n], nm = esc(n), off = s.enabled === false;
+    const col = off ? '#b9bec7' : '#12805c';
+    const lab = (s.pages && s.pages !== '1') ? nm + ' [' + esc(s.pages) + ']' : nm;
+    p.push('<g class="drag" data-el="slot" data-name="' + nm + '"' + (off ? ' opacity="0.45"' : '') + '>');
+    p.push('<path d="M' + (s.x-2) + ' ' + s.y + 'H' + (s.x+2) + 'M' + s.x + ' ' + (s.y-2) + 'V' + (s.y+2) +
+           '" stroke="' + col + '" stroke-width="0.5"/>');
+    p.push('<text x="' + (s.x+2.4) + '" y="' + (s.y-1.6) + '" font-size="4.2" fill="' + col + '" pointer-events="none">' + lab + '</text>');
+    p.push('<rect x="' + s.x + '" y="' + s.y + '" width="' + (s.max_w || 20) + '" height="0.4" fill="' + col + '" opacity="0.4"/>');
+    p.push('<rect class="drag" data-el="slot-w" data-name="' + nm + '" x="' + (s.x + (s.max_w || 20) - 1.2) +
+           '" y="' + (s.y - 1.2) + '" width="2.4" height="2.4" fill="' + col + '"/>');
+    p.push('</g>');
+  }
+  p.push('<circle class="drag" data-el="park" cx="' + d.park_x + '" cy="' + d.park_y + '" r="1.6" fill="none" stroke="#e8590c" stroke-width="0.8"/>');
+  p.push('<text x="' + (d.park_x+2.2) + '" y="' + (d.park_y+1.8) + '" font-size="4" fill="#e8590c" pointer-events="none">停靠</text>');
+  p.push('<circle class="drag" data-el="dot" cx="' + d.dot_x + '" cy="' + d.dot_y + '" r="1" fill="#d64545"/>');
+  p.push('<text x="' + (d.dot_x+1.8) + '" y="' + (d.dot_y-1.2) + '" font-size="3.6" fill="#d64545" pointer-events="none">定位点</text>');
+  svg.innerHTML = p.join('');
+}
+$('tplsvg').addEventListener('pointerdown', e => {
+  const el = e.target.closest ? e.target.closest('[data-el]') : null;
+  const svg = $('tplsvg');
+  const rect = svg.getBoundingClientRect();
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/[\s,]+/).map(Number);
+  // 固定 mm/px 比例（meet 缩放）：拖动增量按屏幕像素换算，与视图变化解耦
+  const mpp = Math.max((vb[2] || 1) / Math.max(rect.width, 1), (vb[3] || 1) / Math.max(rect.height, 1));
+  if(el) viewFrozen = svg.getAttribute('viewBox');  // 仅元件拖动冻结视图；平移必须跟手
+  e.preventDefault();
+  drag = {el: el ? el.dataset.el : 'pan', name: el ? (el.dataset.name || '') : '',
+          x: e.clientX, y: e.clientY, mpp: mpp};
+  try{ svg.setPointerCapture(e.pointerId); }catch(err){}
+});
+$('tplsvg').addEventListener('wheel', e => {
+  e.preventDefault();
+  tplZoom = Math.max(1, Math.min(4, (tplZoom || 1) * (e.deltaY < 0 ? 1.12 : 0.9)));
+  $('tplZoom').value = tplZoom;
+  renderTpl();
+}, {passive: false});
+$('tplsvg').addEventListener('pointermove', e => {
+  if(!drag) return;
+  const dx = (e.clientX - drag.x) * drag.mpp;
+  const dy = (e.clientY - drag.y) * drag.mpp;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if(!dx && !dy) return;
+  // 拖动中不吸附：视觉严格跟手；松手时再吸附（snapAfter）
+  if(drag.el === 'slot'){
+    const tr = slotRow(drag.name); if(!tr) return;
+    const q = s => tr.querySelector(s);
+    q('.sx').value = r2(num(q('.sx').value) + dx);
+    q('.sy').value = r2(num(q('.sy').value) + dy);
+  }else if(drag.el === 'slot-w'){
+    const tr = slotRow(drag.name); if(!tr) return;
+    const q = s => tr.querySelector(s);
+    q('.sw').value = r2(Math.max(5, num(q('.sw').value) + dx));
+  }else if(drag.el === 'body'){
+    $('bx').value = r2(num($('bx').value) + dx);
+    $('by').value = r2(num($('by').value) + dy);
+  }else if(drag.el === 'body-size'){
+    $('bw').value = r2(Math.max(20, num($('bw').value) + dx));
+    $('bh').value = r2(Math.max(20, num($('bh').value) + dy));
+  }else if(drag.el === 'park'){
+    $('pkx').value = r2(num($('pkx').value) + dx);
+    $('pky').value = r2(num($('pky').value) + dy);
+  }else if(drag.el === 'dot'){
+    $('dotx').value = r2(num($('dotx').value) + dx);
+    $('doty').value = r2(num($('doty').value) + dy);
+  }else if(drag.el === 'pan'){
+    tplPan.x -= dx;
+    tplPan.y -= dy;
+    renderTpl();
+    return;
+  }
+  dirty = true;
+  renderTpl();
+});
+function snapAfter(el, name){
+  // 松手时吸附：0.5mm 网格 + 对齐吸附（拖动期间保持跟手）
+  if(el === 'slot'){
+    const tr = slotRow(name); if(!tr) return;
+    const q = s => tr.querySelector(s);
+    q('.sx').value = r2(snap(num(q('.sx').value), 'x', 'slot:' + name));
+    q('.sy').value = r2(snap(num(q('.sy').value), 'y', 'slot:' + name));
+  }else if(el === 'slot-w'){
+    const tr = slotRow(name); if(!tr) return;
+    const q = s => tr.querySelector(s);
+    const nx = snap(num(q('.sx').value) + num(q('.sw').value), 'x', 'slot:' + name);
+    q('.sw').value = r2(Math.max(5, nx - num(q('.sx').value)));
+  }else if(el === 'body'){
+    $('bx').value = r2(snap(num($('bx').value), 'x', 'body'));
+    $('by').value = r2(snap(num($('by').value), 'y', 'body'));
+  }else if(el === 'body-size'){
+    const ex = snap(num($('bx').value) + num($('bw').value), 'x', 'body');
+    const ey = snap(num($('by').value) + num($('bh').value), 'y', 'body');
+    $('bw').value = r2(Math.max(20, ex - num($('bx').value)));
+    $('bh').value = r2(Math.max(20, ey - num($('by').value)));
+  }else if(el === 'park'){
+    $('pkx').value = r2(snap(num($('pkx').value), 'x', 'park'));
+    $('pky').value = r2(snap(num($('pky').value), 'y', 'park'));
+  }else if(el === 'dot'){
+    $('dotx').value = r2(snap(num($('dotx').value), 'x', 'dot'));
+    $('doty').value = r2(snap(num($('doty').value), 'y', 'dot'));
+  }
+}
+$('tplsvg').addEventListener('pointerup', () => {
+  if(drag && drag.el !== 'pan') snapAfter(drag.el, drag.name);
+  drag = null;
+  viewFrozen = null;
+  renderTpl();
+});
+$('tplsvg').addEventListener('pointercancel', () => { drag = null; viewFrozen = null; renderTpl(); });
+
+/* ---------- 启动 ---------- */
+async function boot(){
+  tplData = await (await fetch('/api/template')).json();
+  fillForm(tplData);
+  machineSnap = snapshotMachine();
+  dirty = false;
+  renderTpl();
+  // 任务区纸堆：文件拖拽上传
+  const zone = $('stacks');
+  zone.addEventListener('dragover', e => {
+    if(e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0){
+      e.preventDefault();
+      zone.classList.add('drop-on');
+    }
+  });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drop-on'));
+  zone.addEventListener('drop', e => {
+    zone.classList.remove('drop-on');
+    if(e.dataTransfer.files && e.dataTransfer.files.length){
+      e.preventDefault();
+      addFiles(e.dataTransfer.files);
+    }
+  });
+  // 机器预设：失焦复核确认 + 滑条联动
+  ['zon','zoff','spd','trv','pkx','pky','dotx','doty'].forEach(id => bindMField(id, null));
+  bindMField('tox', 'tox-r');
+  bindMField('toy', 'toy-r');
+  bindMField('tlx', 'tlx-r');
+  bindMField('tly', 'tly-r');
+  $('vdot').addEventListener('change', async () => {
+    if(!(await uiConfirm($('vdot').checked ? '确认开启「开始前画定位点」？' : '确认关闭「开始前画定位点」？'))){
+      $('vdot').checked = !$('vdot').checked;
+      return;
+    }
+    saveMachineValues();
+  });
+  // 查看器：滚轮缩放 + 长按平移
+  const wrap = $('ovWrap');
+  wrap.addEventListener('wheel', e => {
+    if($('ov').hidden) return;
+    e.preventDefault();
+    imgZoom = Math.max(0.5, Math.min(4, imgZoom * (e.deltaY < 0 ? 1.12 : 0.9)));
+    applyImgTransform();
+  }, {passive: false});
+  wrap.addEventListener('pointerdown', e => {
+    if($('ov').hidden) return;
+    pressTimer = setTimeout(() => {
+      panning = {x: e.clientX, y: e.clientY};
+      try{ wrap.setPointerCapture(e.pointerId); }catch(err){}  // 捕获后拖出窗口也能可靠松手
+    }, 220);
+  });
+  wrap.addEventListener('pointermove', e => {
+    if(!panning) return;
+    imgPan.x += e.clientX - panning.x;
+    imgPan.y += e.clientY - panning.y;
+    panning = {x: e.clientX, y: e.clientY};
+    applyImgTransform();
+  });
+  const stopPan = () => { clearTimeout(pressTimer); panning = null; };
+  wrap.addEventListener('pointerup', stopPan);
+  wrap.addEventListener('pointercancel', stopPan);
+  refresh();
+  setInterval(refresh, 2500);
+}
+boot();
+</script>
+</body>
+</html>
